@@ -19,7 +19,7 @@ function HeroBanner({ featuredItem }) {
     <div className="relative h-[56vh] min-h-[480px] flex items-end">
 
       {/* Content */}
-      <div className="relative z-10 px-8 md:px-12 pb-16 max-w-2xl">
+      <div className="relative z-10 px-8 md:px-12 pb-4 md:pb-16 max-w-2xl">
         {/* Meta line */}
         {(year || genres) && (
           <p className="text-white/60 text-sm mb-2 tracking-wide">

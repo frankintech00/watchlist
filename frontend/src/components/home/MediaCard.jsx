@@ -25,7 +25,7 @@ function MediaCard({ item }) {
       {/* Inner wrapper — this is what scales. Panel lives inside so it scales too,
           meaning top:100% aligns exactly with the visual bottom of the scaled image. */}
       <div
-        className="relative transition-transform duration-200 ease-out group-hover/card:scale-[1.12] group-hover/card:z-30"
+        className="relative transition-transform duration-200 ease-out md:group-hover/card:scale-[1.12] md:group-hover/card:z-30"
         style={{ transformOrigin: 'top center' }}
       >
         {/* Poster */}
@@ -53,7 +53,7 @@ function MediaCard({ item }) {
 
         {/* Hover detail panel */}
         <div
-          className="absolute left-0 right-0 bg-[#1f1f1f] rounded-b px-2 pt-2 pb-2.5 shadow-2xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-150"
+          className="hidden md:block absolute left-0 right-0 bg-[#1f1f1f] rounded-b px-2 pt-2 pb-2.5 shadow-2xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-150"
           style={{ top: '100%' }}
         >
           <p className="text-white text-xs font-semibold leading-tight line-clamp-2 mb-1">

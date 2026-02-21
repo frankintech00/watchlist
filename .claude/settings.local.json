@@ -16,7 +16,9 @@
       "Bash(cd /d/Docker/watchlist && docker compose build backend && docker compose up -d backend 2>&1)",
       "Bash(cd:*)",
       "Bash(tail:*)",
-      "Bash(cd /d/Docker/watchlist && docker compose up --build -d 2>&1)"
+      "Bash(cd /d/Docker/watchlist && docker compose up --build -d 2>&1)",
+      "Bash(cd \"D:/Docker/watchlist\" && docker compose up --build -d 2>&1)",
+      "Bash(rm:*)"
     ]
   }
 }
