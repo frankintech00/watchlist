@@ -32,12 +32,10 @@ function SeasonList({ showId, seasons, trackedEpisodes, onEpisodeToggle, onSeaso
     }
   }
 
-  const getSeasonProgress = (seasonNumber) => {
+  const getSeasonProgress = (seasonNumber, episodeCount) => {
     const seasonEpisodes = trackedEpisodes.filter(e => e.season_number === seasonNumber)
     const watched = seasonEpisodes.filter(e => e.watched).length
-    const total = seasonEpisodes.length
-
-    return { watched, total }
+    return { watched, total: episodeCount }
   }
 
   return (
@@ -46,8 +44,8 @@ function SeasonList({ showId, seasons, trackedEpisodes, onEpisodeToggle, onSeaso
       <div className="space-y-4">
         {regularSeasons.map((season) => {
           const isExpanded = expandedSeason === season.season_number
-          const progress = getSeasonProgress(season.season_number)
-          const hasProgress = progress.total > 0
+          const progress = getSeasonProgress(season.season_number, season.episode_count)
+          const hasProgress = progress.watched > 0
 
           return (
             <div key={season.season_number} className="bg-dark-card rounded-lg overflow-hidden">

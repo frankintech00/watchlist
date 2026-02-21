@@ -13,6 +13,7 @@ Date: 20-02-2026
 
 from fastapi import APIRouter, HTTPException
 import httpx
+import asyncio
 import os
 from typing import Optional
 
@@ -87,7 +88,12 @@ async def search_multi(query: str, page: int = 1):
     if not query.strip():
         raise HTTPException(status_code=400, detail="Search query cannot be empty")
 
-    data = await fetch_tmdb("/search/multi", {"query": query, "page": page})
+    data = await fetch_tmdb("/search/multi", {
+        "query": query,
+        "page": page,
+        "language": "en-GB",
+        "with_original_language": "en",
+    })
     return {
         "results": data.get("results", []),
         "total_pages": data.get("total_pages", 0),
@@ -104,7 +110,7 @@ async def get_upcoming_movies(page: int = 1):
     Fetch upcoming theatrical releases from TMDB.
     Used for the Coming Soon row on the home screen.
     """
-    data = await fetch_tmdb("/movie/upcoming", {"page": page})
+    data = await fetch_tmdb("/movie/upcoming", {"page": page, "with_original_language": "en"})
     return {
         "results": data.get("results", []),
         "total_pages": data.get("total_pages", 0),
@@ -191,7 +197,7 @@ async def get_similar_movies(movie_id: int, page: int = 1):
     Fetch films similar to the specified movie.
     Used for recommendations and related titles section.
     """
-    data = await fetch_tmdb(f"/movie/{movie_id}/similar", {"page": page})
+    data = await fetch_tmdb(f"/movie/{movie_id}/similar", {"page": page, "with_original_language": "en"})
     return {
         "results": data.get("results", []),
         "total_pages": data.get("total_pages", 0),
@@ -272,6 +278,7 @@ async def get_upcoming_tv_shows(page: int = 1):
         "first_air_date.gte": today,
         "sort_by": "popularity.desc",
         "language": "en-GB",
+        "with_original_language": "en",
         "page": page
     })
     return {
@@ -287,26 +294,33 @@ async def get_tv_show_detail(show_id: int):
     """
     Fetch detailed TV show information from TMDB.
     Includes name, overview, seasons, poster, backdrop, genres.
+    Credits and videos are fetched as separate parallel requests so that
+    a failure on either (e.g. very large shows with extensive cast lists)
+    does not break the main show data — they degrade to empty gracefully.
     """
-    data = await fetch_tmdb(
-        f"/tv/{show_id}",
-        {"append_to_response": "videos,credits"}
+    # Run all three fetches in parallel; credits/videos failures are non-fatal.
+    results = await asyncio.gather(
+        fetch_tmdb(f"/tv/{show_id}"),
+        fetch_tmdb(f"/tv/{show_id}/videos"),
+        fetch_tmdb(f"/tv/{show_id}/credits"),
+        return_exceptions=True
     )
 
-    # Extract all YouTube videos
-    videos = []
-    trailer_key = None
-    if "videos" in data and "results" in data["videos"]:
-        youtube_videos = [
-            v for v in data["videos"]["results"]
-            if v.get("site") == "YouTube"
-        ]
-        videos = youtube_videos
+    # Main show data must succeed — re-raise if it failed.
+    if isinstance(results[0], Exception):
+        raise results[0]
 
-        # Also keep the first trailer for backwards compatibility
-        trailers = [v for v in youtube_videos if v.get("type") == "Trailer"]
-        if trailers:
-            trailer_key = trailers[0].get("key")
+    data         = results[0]
+    videos_data  = {} if isinstance(results[1], Exception) else results[1]
+    credits_data = {} if isinstance(results[2], Exception) else results[2]
+
+    # Extract YouTube videos
+    youtube_videos = [
+        v for v in videos_data.get("results", [])
+        if v.get("site") == "YouTube"
+    ]
+    trailers = [v for v in youtube_videos if v.get("type") == "Trailer"]
+    trailer_key = trailers[0].get("key") if trailers else None
 
     return {
         "id": data.get("id"),
@@ -324,11 +338,11 @@ async def get_tv_show_detail(show_id: int):
         "vote_count": data.get("vote_count"),
         "status": data.get("status"),
         "trailer_key": trailer_key,
-        "videos": videos,
-        "cast": data.get("credits", {}).get("cast", [])[:20],
-        "crew": data.get("credits", {}).get("crew", []),
+        "videos": youtube_videos,
+        "cast": credits_data.get("cast", [])[:20],
+        "crew": credits_data.get("crew", []),
         "created_by": data.get("created_by", []),
-        "credits": data.get("credits", {})
+        "credits": credits_data
     }
 
 
@@ -379,7 +393,7 @@ async def get_similar_tv_shows(show_id: int, page: int = 1):
     Fetch TV shows similar to the specified show.
     Used for recommendations and related titles section.
     """
-    data = await fetch_tmdb(f"/tv/{show_id}/similar", {"page": page})
+    data = await fetch_tmdb(f"/tv/{show_id}/similar", {"page": page, "with_original_language": "en"})
     return {
         "results": data.get("results", []),
         "total_pages": data.get("total_pages", 0),

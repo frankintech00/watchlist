@@ -169,7 +169,7 @@ async def get_recommendations(db: Session = Depends(get_db)):
             try:
                 # Fetch similar movies from TMDB
                 url = f"{TMDB_BASE_URL}/movie/{movie.tmdb_movie_id}/similar"
-                params = {"api_key": TMDB_API_KEY, "page": 1}
+                params = {"api_key": TMDB_API_KEY, "page": 1, "with_original_language": "en"}
                 response = await client.get(url, params=params, timeout=10.0)
 
                 if response.status_code == 200:

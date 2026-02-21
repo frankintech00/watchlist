@@ -10,7 +10,7 @@ function CastRow({ cast }) {
 
   return (
     <div>
-      <h2 className="text-2xl font-heading mb-4">Cast</h2>
+      <h2 className="text-2xl font-heading mb-4 px-8 md:px-12">Cast</h2>
       <ScrollableRow>
         <div className="flex gap-4 pb-4">
           {cast.map((person) => (

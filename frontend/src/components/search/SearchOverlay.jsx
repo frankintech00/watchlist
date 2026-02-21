@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { tmdbAPI } from '../../api/client'
 
-function SearchOverlay({ query, onResultClick, onClose }) {
+function SearchOverlay({ query, onResultClick, onClose, topOffset = 64 }) {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -52,7 +52,8 @@ function SearchOverlay({ query, onResultClick, onClose }) {
   return (
     /* Backdrop — clicking it closes the overlay */
     <div
-      className="fixed top-16 inset-x-0 bottom-0 z-40 bg-[#141414]/95 overflow-y-auto scrollbar-hide"
+      className="fixed inset-x-0 bottom-0 z-40 bg-[#141414]/95 overflow-y-auto scrollbar-hide"
+      style={{ top: topOffset }}
       onClick={onClose}
     >
       {/* Grid container — stop click propagation so clicking a card doesn't close */}

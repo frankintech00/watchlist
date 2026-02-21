@@ -7,7 +7,9 @@ function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
+  const [headerHeight, setHeaderHeight] = useState(64)
   const inputRef = useRef(null)
+  const headerRef = useRef(null)
   const location = useLocation()
 
   // Solid background on scroll
@@ -15,6 +17,17 @@ function Header() {
     const onScroll = () => setScrolled(window.scrollY > 10)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Measure header height so the overlay can anchor directly below it.
+  // Re-measured on resize to handle mobile ↔ desktop breakpoint transitions.
+  useEffect(() => {
+    const update = () => {
+      if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [])
 
   // Close search on route change
@@ -29,7 +42,7 @@ function Header() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
-  // Focus input when search opens
+  // Focus desktop input when search opens
   useEffect(() => {
     if (searchOpen && inputRef.current) {
       inputRef.current.focus()
@@ -59,9 +72,11 @@ function Header() {
   return (
     <>
       <header
+        ref={headerRef}
         className="fixed top-0 left-0 right-0 z-50 transition-colors duration-300"
         style={{ background: scrolled ? '#141414' : 'transparent' }}
       >
+        {/* ── Row 1: Logo + Nav + Search (desktop only) ── */}
         <div className="flex items-center h-16 px-8 md:px-12">
           {/* Logo */}
           <Link to="/" className="font-logo text-2xl tracking-widest text-white flex-shrink-0">
@@ -84,8 +99,8 @@ function Header() {
             </Link>
           </nav>
 
-          {/* Search — far right */}
-          <div className="ml-auto flex items-center">
+          {/* Search toggle — desktop only */}
+          <div className="ml-auto hidden md:flex items-center">
             {searchOpen ? (
               <div className="flex items-center gap-2">
                 <input
@@ -119,14 +134,26 @@ function Header() {
             )}
           </div>
         </div>
+
+        {/* ── Row 2: Full-width search bar — mobile only ── */}
+        <div className="md:hidden px-4 pb-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search titles, people, genres"
+            className="w-full bg-black/80 border border-white/40 text-white text-sm px-3 py-1.5 rounded focus:outline-none focus:border-white placeholder-white/40"
+          />
+        </div>
       </header>
 
-      {/* Full-page search overlay — rendered outside header so backdrop-filter doesn't confine it */}
-      {searchOpen && showResults && (
+      {/* Search overlay — anchored directly below the header (height varies by breakpoint) */}
+      {showResults && (
         <SearchOverlay
           query={searchQuery}
           onResultClick={handleResultClick}
           onClose={closeSearch}
+          topOffset={headerHeight}
         />
       )}
     </>

@@ -110,7 +110,7 @@ function PersonDetail() {
       <div className="relative z-10">
 
         {/* ── Two-column header ─────────────────────────── */}
-        <div className="pt-28 pb-10 px-8 md:px-12">
+        <div className="pt-32 md:pt-28 pb-10 px-8 md:px-12">
           <div className="flex gap-8 md:gap-10 max-w-screen-xl mx-auto">
 
             {/* Profile photo */}

@@ -166,8 +166,8 @@ function Home() {
         <HeroBanner featuredItem={featuredItem} />
       </div>
 
-      {/* Content Rows */}
-      <div className="relative z-10 pb-12">
+      {/* Content Rows — pt only applied when there is no HeroBanner to provide vertical separation */}
+      <div className={`relative z-10 pb-12${!featuredItem ? ' pt-32 md:pt-16' : ''}`}>
         {watchingShows.length > 0 && (
           <MediaRow title="Watching" items={watchingShows} />
         )}
