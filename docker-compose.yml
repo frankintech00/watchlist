@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - watchlist-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_PATH=/app/data/watchlist.db
+      - TMDB_API_KEY=${TMDB_API_KEY}
+    networks:
+      - watchlist-network
+
+networks:
+  watchlist-network:
+    driver: bridge

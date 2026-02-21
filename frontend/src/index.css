@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@layer base {
+  body {
+    @apply bg-dark text-white font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Headings use DM Sans bold — Bebas Neue is only applied via font-logo on the wordmark */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-bold;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Remove default focus outlines and replace with subtle accent ring */
+  :focus-visible {
+    outline: 2px solid #E50914;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* ── Scrollbar ─────────────────────────────────── */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── Netflix-style buttons ─────────────────────── */
+  .nf-btn-primary {
+    @apply inline-flex items-center gap-2 px-6 py-2.5 rounded bg-white text-black font-semibold text-sm transition-opacity duration-150 hover:opacity-80 active:opacity-70;
+  }
+
+  .nf-btn-secondary {
+    @apply inline-flex items-center gap-2 px-6 py-2.5 rounded font-semibold text-sm text-white transition-opacity duration-150 hover:opacity-80;
+    background: rgba(109, 109, 110, 0.7);
+  }
+
+  .nf-btn-icon {
+    @apply w-10 h-10 rounded-full border-2 border-white/60 flex items-center justify-center text-white transition-all duration-150 hover:border-white hover:scale-110;
+  }
+
+  /* ── Card ──────────────────────────────────────── */
+  .nf-card {
+    @apply relative rounded overflow-hidden cursor-pointer transition-transform duration-200 ease-out;
+  }
+
+  .nf-card:hover {
+    @apply z-20;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.25);
+  }
+
+  /* ── Tabs ──────────────────────────────────────── */
+  .nf-tab {
+    @apply px-4 py-2 text-sm font-semibold transition-colors duration-150 border-b-2 border-transparent text-[#999999] hover:text-white;
+  }
+
+  .nf-tab-active {
+    @apply text-white border-primary;
+  }
+
+  /* ── Section heading ───────────────────────────── */
+  .nf-row-title {
+    @apply text-white font-semibold text-base mb-3;
+  }
+
+  /* ── Input ─────────────────────────────────────── */
+  .nf-input {
+    @apply bg-[#333] border border-[#555] text-white placeholder-[#999] px-3 py-2 rounded text-sm focus:outline-none focus:border-white transition-colors duration-150;
+  }
+}
