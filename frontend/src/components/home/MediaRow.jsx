@@ -17,7 +17,7 @@ function MediaRow({ title, items }) {
         {/* Mobile: pl-4 gives a left margin matching the page edge.
             Desktop: pl-0 — the w-12 arrow column provides the gutter.
             pb-40 gives clearance for the card hover-panel below the last card row. */}
-        <div className="flex gap-3 pb-5 md:pb-8 pl-4 md:pl-0">
+        <div className="flex gap-3 pb-5 md:pb-24 pl-4 md:pl-0">
           {items.map((item) => {
             const isMovie = item.media_type === 'movie' || item.tmdb_movie_id
             const id = isMovie ? (item.id || item.tmdb_movie_id) : (item.id || item.tmdb_show_id)

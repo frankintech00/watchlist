@@ -1,11 +1,11 @@
-function FilterTabs({ activeFilter, onFilterChange }) {
+function FilterTabs({ activeFilter, onFilterChange, mediaType }) {
   const filters = [
-    { id: 'watching',  label: 'Watching' },
-    { id: 'to-watch',  label: 'To Watch' },
-    { id: 'watched',   label: 'Watched' },
+    { id: 'watching',   label: 'Watching' },
+    { id: 'to-watch',   label: 'To Watch' },
+    { id: 'watched',    label: 'Watched' },
     { id: 'favourited', label: 'Favourites' },
-    { id: 'all',       label: 'All' },
-  ]
+    { id: 'all',        label: 'All' },
+  ].filter(f => !(mediaType === 'films' && f.id === 'watching'))
 
   return (
     <div className="flex gap-6 mb-6 border-b border-[#2a2a2a]">

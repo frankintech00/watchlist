@@ -110,7 +110,10 @@ function Library() {
         {mediaTypes.map(({ id, label }) => (
           <button
             key={id}
-            onClick={() => setMediaType(id)}
+            onClick={() => {
+              setMediaType(id)
+              if (id === 'films' && activeFilter === 'watching') setActiveFilter('to-watch')
+            }}
             className={`pb-3 text-sm font-semibold transition-colors duration-150 border-b-2 -mb-px ${
               mediaType === id
                 ? 'text-white border-primary'
@@ -123,7 +126,7 @@ function Library() {
       </div>
 
       {/* Status filter tabs */}
-      <FilterTabs activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+      <FilterTabs activeFilter={activeFilter} onFilterChange={setActiveFilter} mediaType={mediaType} />
 
       {/* Search */}
       <div className="mb-8">
