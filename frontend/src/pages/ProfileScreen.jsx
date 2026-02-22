@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   return (
     <div className="min-h-screen bg-[#141414] flex flex-col items-center justify-center px-4">
       <h1 className="text-white text-4xl md:text-5xl font-light mb-12 tracking-wide">
-        Who's watching?
+        Who are you?
       </h1>
 
       {/* Profile grid */}
