@@ -11,6 +11,8 @@ Date: 22-02-2026
 ===================================================================================
 """
 
+from datetime import datetime
+
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, UniqueConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -50,8 +52,8 @@ class TrackedMovie(Base):
     favourited = Column(Boolean, default=False, nullable=False)
     rating = Column(Integer, default=0, nullable=False)  # 0-5 stars
     comment = Column(Text, default="", nullable=False)
-    added_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), nullable=False)
+    added_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), default=datetime.utcnow, nullable=False)
 
 
 class TrackedShow(Base):
@@ -67,8 +69,8 @@ class TrackedShow(Base):
     favourited = Column(Boolean, default=False, nullable=False)
     rating = Column(Integer, default=0, nullable=False)  # 0-5 stars
     comment = Column(Text, default="", nullable=False)
-    added_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), nullable=False)
+    added_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), default=datetime.utcnow, nullable=False)
 
     # Denormalised counts for performance
     total_episodes = Column(Integer, nullable=True)

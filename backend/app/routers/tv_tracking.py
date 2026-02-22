@@ -132,8 +132,8 @@ def _show_response(s: TrackedShow) -> ShowTrackingResponse:
         comment=s.comment,
         total_episodes=s.total_episodes,
         watched_episodes=s.watched_episodes,
-        added_at=s.added_at.isoformat(),
-        updated_at=s.updated_at.isoformat(),
+        added_at=s.added_at.isoformat() if s.added_at else '',
+        updated_at=s.updated_at.isoformat() if s.updated_at else '',
     )
 
 

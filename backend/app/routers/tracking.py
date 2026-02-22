@@ -73,8 +73,8 @@ def _movie_response(m: TrackedMovie) -> TrackingResponse:
         favourited=m.favourited,
         rating=m.rating,
         comment=m.comment,
-        added_at=m.added_at.isoformat(),
-        updated_at=m.updated_at.isoformat(),
+        added_at=m.added_at.isoformat() if m.added_at else '',
+        updated_at=m.updated_at.isoformat() if m.updated_at else '',
     )
 
 

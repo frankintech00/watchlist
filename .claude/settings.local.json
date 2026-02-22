@@ -19,7 +19,8 @@
       "Bash(cd /d/Docker/watchlist && docker compose up --build -d 2>&1)",
       "Bash(cd \"D:/Docker/watchlist\" && docker compose up --build -d 2>&1)",
       "Bash(rm:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }
