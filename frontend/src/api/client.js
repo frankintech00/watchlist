@@ -5,6 +5,17 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
+// === ACTIVE USER ===
+let _activeUserId = null
+
+export function setActiveUser(id) {
+  _activeUserId = id
+}
+
+export function getActiveUser() {
+  return _activeUserId
+}
+
 class APIError extends Error {
   constructor(message, status, data) {
     super(message)
@@ -97,84 +108,124 @@ export const tmdbAPI = {
     fetchAPI(`/tmdb/tv/${showId}/reviews?page=${page}`),
 }
 
+// === USERS ENDPOINTS ===
+
+export const usersAPI = {
+  getAll: () =>
+    fetchAPI('/users/'),
+
+  create: ({ name }) =>
+    fetchAPI('/users/', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  delete: (userId) =>
+    fetchAPI(`/users/${userId}`, {
+      method: 'DELETE',
+    }),
+
+  uploadAvatar: async (userId, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/avatar`, {
+      method: 'POST',
+      body: formData,
+    })
+    const contentType = response.headers.get('content-type')
+    let data = null
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json()
+    }
+    if (!response.ok) {
+      throw new APIError(
+        data?.detail || `Avatar upload failed: ${response.statusText}`,
+        response.status,
+        data
+      )
+    }
+    return data
+  },
+}
+
 // === TRACKING ENDPOINTS ===
 
 export const trackingAPI = {
   // Films
   getAll: (filters = {}) => {
-    const params = new URLSearchParams(filters).toString()
-    return fetchAPI(`/tracking/${params ? `?${params}` : ''}`)
+    const params = new URLSearchParams({ user_id: _activeUserId, ...filters }).toString()
+    return fetchAPI(`/tracking/?${params}`)
   },
 
   getById: (tmdbId) =>
-    fetchAPI(`/tracking/${tmdbId}`),
+    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`),
 
   track: (tmdbId, data) =>
-    fetchAPI(`/tracking/${tmdbId}`, {
+    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   update: (tmdbId, data) =>
-    fetchAPI(`/tracking/${tmdbId}`, {
+    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
   delete: (tmdbId) =>
-    fetchAPI(`/tracking/${tmdbId}`, {
+    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`, {
       method: 'DELETE',
     }),
 
   getRecommendations: () =>
-    fetchAPI('/tracking/recommendations'),
+    fetchAPI(`/tracking/recommendations?user_id=${_activeUserId}`),
 
   getStats: () =>
-    fetchAPI('/tracking/stats'),
+    fetchAPI(`/tracking/stats?user_id=${_activeUserId}`),
 
   // TV Shows
   shows: {
     getAll: (filters = {}) => {
-      const params = new URLSearchParams(filters).toString()
-      return fetchAPI(`/tracking/shows${params ? `?${params}` : ''}`)
+      const params = new URLSearchParams({ user_id: _activeUserId, ...filters }).toString()
+      return fetchAPI(`/tracking/shows?${params}`)
     },
 
     getById: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}`),
+      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`),
 
     track: (tmdbId, data) =>
-      fetchAPI(`/tracking/shows/${tmdbId}`, {
+      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
     update: (tmdbId, data) =>
-      fetchAPI(`/tracking/shows/${tmdbId}`, {
+      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
 
     delete: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}`, {
+      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`, {
         method: 'DELETE',
       }),
 
     getEpisodes: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/episodes`),
+      fetchAPI(`/tracking/shows/${tmdbId}/episodes?user_id=${_activeUserId}`),
 
     markEpisodes: (tmdbId, episodes) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/episodes`, {
+      fetchAPI(`/tracking/shows/${tmdbId}/episodes?user_id=${_activeUserId}`, {
         method: 'POST',
         body: JSON.stringify({ episodes }),
       }),
 
     markSeason: (tmdbId, seasonNumber, watched) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/season/${seasonNumber}/mark-watched?watched=${watched}`, {
+      fetchAPI(`/tracking/shows/${tmdbId}/season/${seasonNumber}/mark-watched?watched=${watched}&user_id=${_activeUserId}`, {
         method: 'POST',
       }),
 
     getProgress: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/progress`),
+      fetchAPI(`/tracking/shows/${tmdbId}/progress?user_id=${_activeUserId}`),
   },
 }
 

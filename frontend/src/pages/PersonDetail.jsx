@@ -114,7 +114,7 @@ function PersonDetail() {
           <div className="flex gap-8 md:gap-10 max-w-screen-xl mx-auto">
 
             {/* Profile photo */}
-            <div className="flex-shrink-0 w-44 md:w-52">
+            <div className="flex-shrink-0 w-20 md:w-52">
               {profileUrl ? (
                 <img
                   src={profileUrl}
@@ -130,7 +130,7 @@ function PersonDetail() {
 
             {/* Info */}
             <div className="flex-1 min-w-0 pt-2">
-              <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
+              <h1 className="text-2xl md:text-5xl font-bold text-white leading-tight mb-4">
                 {person.name}
               </h1>
 
