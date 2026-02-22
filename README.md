@@ -4,6 +4,7 @@ A self-hosted film and TV tracking application with a Netflix-style interface. S
 
 ## Features
 
+- **Multi-user profiles** — Netflix-style "Who's watching?" screen on first load; each profile has its own independent library and tracking data
 - **Search** — search films, TV shows, and people via TMDB
 - **Track** — mark films as watched, track TV episodes and seasons individually
 - **Rate & review** — 5-star personal rating and freetext notes per title
@@ -47,9 +48,10 @@ The backend API is available at [http://localhost:8000](http://localhost:8000).
 watchlist/
 ├── frontend/
 │   ├── src/
-│   │   ├── api/            # API client (trackingAPI, tmdbAPI)
+│   │   ├── api/            # API client (trackingAPI, tmdbAPI, usersAPI)
+│   │   ├── context/        # UserContext — active profile state
 │   │   ├── components/
-│   │   │   ├── common/     # ScrollableRow
+│   │   │   ├── common/     # ScrollableRow, ProfileAvatar
 │   │   │   ├── home/       # HeroBanner, MediaRow, MediaCard
 │   │   │   ├── layout/     # Header, SearchOverlay
 │   │   │   ├── library/    # LibraryGrid, FilterTabs
@@ -58,7 +60,7 @@ watchlist/
 │   │   │   ├── search/     # MediaTypeBadge
 │   │   │   └── tv/         # SeasonList
 │   │   ├── pages/          # Home, Library, MovieDetailPage,
-│   │   │                   # TVShowDetail, PersonDetail
+│   │   │                   # TVShowDetail, PersonDetail, ProfileScreen
 │   │   └── index.css       # Tailwind base + component classes
 │   ├── tailwind.config.js
 │   └── Dockerfile
@@ -67,11 +69,12 @@ watchlist/
 │   │   ├── routers/
 │   │   │   ├── tmdb.py       # TMDB API proxy
 │   │   │   ├── tracking.py   # Movie tracking endpoints
-│   │   │   └── tv_tracking.py# TV show + episode tracking
+│   │   │   ├── tv_tracking.py# TV show + episode tracking
+│   │   │   └── users.py      # User profile CRUD + avatar upload
 │   │   └── main.py
 │   ├── requirements.txt
 │   └── Dockerfile
-├── data/                   # SQLite database (not committed)
+├── data/                   # SQLite database + avatars/ (not committed)
 ├── .env                    # TMDB_API_KEY (not committed)
 └── docker-compose.yml
 ```
@@ -117,9 +120,19 @@ docker compose logs -f backend
 | Frontend (Nginx) | 3000 |
 | Backend (FastAPI) | 8000 |
 
+## Multi-User Profiles
+
+On first load the app shows a "Who's watching?" screen. Each profile has its own independent tracking data — watched status, ratings, notes, and favourites are never shared between profiles.
+
+- **Add a profile** — click the `+` card on the profile screen, type a name, press Add
+- **Switch profile** — click your avatar in the top-right header → "Switch Profile"
+- **Delete a profile** — click "Manage Profiles", then the red × on any card (this also deletes all their tracking data)
+- **Avatar images** — upload a profile photo via the users API (`POST /api/users/{id}/avatar`); initials with a colour are shown as a fallback
+- The active profile is persisted in `localStorage` so the browser remembers who was last watching
+
 ## Notes
 
-- The `data/` directory is bind-mounted into the backend container and holds the SQLite database. It is not committed to version control.
+- The `data/` directory is bind-mounted into the backend container and holds the SQLite database and avatar images. It is not committed to version control.
 - The `.env` file is not committed to version control.
 - TMDB image assets are served directly from `image.tmdb.org` — no local caching.
 - The backend proxies all TMDB requests so the API key is never exposed to the browser.

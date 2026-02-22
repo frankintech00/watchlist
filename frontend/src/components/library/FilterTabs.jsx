@@ -8,12 +8,12 @@ function FilterTabs({ activeFilter, onFilterChange, mediaType }) {
   ].filter(f => !(mediaType === 'films' && f.id === 'watching'))
 
   return (
-    <div className="flex gap-6 mb-6 border-b border-[#2a2a2a]">
+    <div className="flex gap-2 md:gap-6 mb-6 border-b border-[#2a2a2a]">
       {filters.map(({ id, label }) => (
         <button
           key={id}
           onClick={() => onFilterChange(id)}
-          className={`pb-3 text-sm font-medium transition-colors duration-150 border-b-2 -mb-px ${
+          className={`px-2 py-1 md:px-0 md:py-0 md:pb-3 text-xs md:text-sm font-medium transition-colors duration-150 border-b-2 -mb-px ${
             activeFilter === id
               ? 'text-white border-primary'
               : 'text-[#999] border-transparent hover:text-white'
