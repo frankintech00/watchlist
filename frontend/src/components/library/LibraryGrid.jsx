@@ -84,6 +84,11 @@ function LibraryGrid({ items }) {
                   {item.favourited && (
                     <span className="text-yellow-400 text-xs leading-none">★</span>
                   )}
+                  {item.watchlisted && (
+                    <svg className="w-3.5 h-3.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                    </svg>
+                  )}
                 </div>
               </div>
             </div>

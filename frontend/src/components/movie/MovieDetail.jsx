@@ -6,10 +6,11 @@ import ScrollableRow from '../common/ScrollableRow'
 import { trackingAPI, tmdbAPI } from '../../api/client'
 
 function MovieDetail({ movie, trackingData }) {
-  const [watched,    setWatched]    = useState(trackingData?.watched    || false)
-  const [favourited, setFavourited] = useState(trackingData?.favourited || false)
-  const [rating,     setRating]     = useState(trackingData?.rating     || 0)
-  const [comment,    setComment]    = useState(trackingData?.comment     || '')
+  const [watched,     setWatched]     = useState(trackingData?.watched     || false)
+  const [favourited,  setFavourited]  = useState(trackingData?.favourited  || false)
+  const [watchlisted, setWatchlisted] = useState(trackingData?.watchlisted || false)
+  const [rating,      setRating]      = useState(trackingData?.rating      || 0)
+  const [comment,     setComment]     = useState(trackingData?.comment      || '')
   const [saving,     setSaving]     = useState(false)
   const [similarMovies, setSimilarMovies] = useState([])
   const [mobileRatingOpen, setMobileRatingOpen] = useState(false)
@@ -41,10 +42,11 @@ function MovieDetail({ movie, trackingData }) {
     try {
       setSaving(true)
       const payload = {
-        watched:    updatedData.watched    ?? watched,
-        favourited: updatedData.favourited ?? favourited,
-        rating:     updatedData.rating     ?? rating,
-        comment:    updatedData.comment    ?? comment,
+        watched:     updatedData.watched     ?? watched,
+        favourited:  updatedData.favourited  ?? favourited,
+        watchlisted: updatedData.watchlisted ?? watchlisted,
+        rating:      updatedData.rating      ?? rating,
+        comment:     updatedData.comment     ?? comment,
       }
       if (trackingData) {
         await trackingAPI.update(movie.id, payload)
@@ -67,13 +69,24 @@ function MovieDetail({ movie, trackingData }) {
   const toggleWatched = () => {
     const next = !watched
     setWatched(next)
-    autoSave({ watched: next })
+    if (next && watchlisted) {
+      setWatchlisted(false)
+      autoSave({ watched: next, watchlisted: false })
+    } else {
+      autoSave({ watched: next })
+    }
   }
 
   const toggleFavourite = () => {
     const next = !favourited
     setFavourited(next)
     autoSave({ favourited: next })
+  }
+
+  const toggleWatchlist = () => {
+    const next = !watchlisted
+    setWatchlisted(next)
+    autoSave({ watchlisted: next })
   }
 
   return (
@@ -175,6 +188,24 @@ function MovieDetail({ movie, trackingData }) {
           {/* ── Mobile action bar ── */}
           <div className="px-4 pt-4 pb-2">
             <div className="flex items-start justify-around">
+
+              {/* Watchlist */}
+              <button onClick={toggleWatchlist} className="flex flex-col items-center gap-1.5">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                  watchlisted ? 'bg-blue-500/20' : 'bg-[#2a2a2a]'
+                }`}>
+                  <svg
+                    className={`w-5 h-5 transition-colors ${watchlisted ? 'text-blue-400' : 'text-white/60'}`}
+                    fill={watchlisted ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                  </svg>
+                </div>
+                <span className="text-[10px] text-white/40">Watchlist</span>
+              </button>
 
               {/* Watched */}
               <button onClick={toggleWatched} className="flex flex-col items-center gap-1.5">
@@ -356,6 +387,18 @@ function MovieDetail({ movie, trackingData }) {
 
               {/* Action buttons */}
               <div className="flex items-center gap-3 mb-6 flex-wrap">
+                <button
+                  onClick={toggleWatchlist}
+                  className="nf-btn-secondary"
+                  style={watchlisted ? { color: '#60a5fa' } : {}}
+                >
+                  <svg fill={watchlisted ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}
+                    className="w-4 h-4" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                  </svg>
+                  Watchlist
+                </button>
+
                 <button
                   onClick={toggleWatched}
                   className={watched ? 'nf-btn-secondary' : 'nf-btn-primary'}

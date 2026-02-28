@@ -28,6 +28,7 @@ class TrackingCreate(BaseModel):
     """Request model for creating or updating tracking data."""
     watched: Optional[bool] = False
     favourited: Optional[bool] = False
+    watchlisted: Optional[bool] = False
     rating: Optional[int] = Field(default=0, ge=0, le=5)
     comment: Optional[str] = ""
 
@@ -36,6 +37,7 @@ class TrackingUpdate(BaseModel):
     """Request model for partial updates to tracking data."""
     watched: Optional[bool] = None
     favourited: Optional[bool] = None
+    watchlisted: Optional[bool] = None
     rating: Optional[int] = Field(default=None, ge=0, le=5)
     comment: Optional[str] = None
 
@@ -46,6 +48,7 @@ class TrackingResponse(BaseModel):
     tmdb_movie_id: int
     watched: bool
     favourited: bool
+    watchlisted: bool
     rating: int
     comment: str
     added_at: str
@@ -71,6 +74,7 @@ def _movie_response(m: TrackedMovie) -> TrackingResponse:
         tmdb_movie_id=m.tmdb_movie_id,
         watched=m.watched,
         favourited=m.favourited,
+        watchlisted=m.watchlisted,
         rating=m.rating,
         comment=m.comment,
         added_at=m.added_at.isoformat() if m.added_at else '',
@@ -85,6 +89,7 @@ async def get_tracked_movies(
     user_id: int,
     watched: Optional[bool] = None,
     favourited: Optional[bool] = None,
+    watchlisted: Optional[bool] = None,
     rated: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
@@ -99,6 +104,9 @@ async def get_tracked_movies(
 
     if favourited is not None:
         query = query.filter(TrackedMovie.favourited == favourited)
+
+    if watchlisted is not None:
+        query = query.filter(TrackedMovie.watchlisted == watchlisted)
 
     if rated is not None:
         if rated:
@@ -124,6 +132,7 @@ async def get_tracking_stats(user_id: int, db: Session = Depends(get_db)):
         "total_tracked": base.count(),
         "watched": base.filter(TrackedMovie.watched == True).count(),
         "favourited": base.filter(TrackedMovie.favourited == True).count(),
+        "watchlisted": base.filter(TrackedMovie.watchlisted == True).count(),
         "rated": base.filter(TrackedMovie.rating > 0).count(),
     }
 
@@ -207,6 +216,7 @@ async def track_movie(
     if existing:
         existing.watched = tracking_data.watched
         existing.favourited = tracking_data.favourited
+        existing.watchlisted = tracking_data.watchlisted
         existing.rating = tracking_data.rating
         existing.comment = tracking_data.comment
         movie = existing
@@ -216,6 +226,7 @@ async def track_movie(
             tmdb_movie_id=tmdb_id,
             watched=tracking_data.watched,
             favourited=tracking_data.favourited,
+            watchlisted=tracking_data.watchlisted,
             rating=tracking_data.rating,
             comment=tracking_data.comment,
         )
@@ -252,6 +263,8 @@ async def update_tracking(
         movie.watched = tracking_data.watched
     if tracking_data.favourited is not None:
         movie.favourited = tracking_data.favourited
+    if tracking_data.watchlisted is not None:
+        movie.watchlisted = tracking_data.watchlisted
     if tracking_data.rating is not None:
         movie.rating = tracking_data.rating
     if tracking_data.comment is not None:

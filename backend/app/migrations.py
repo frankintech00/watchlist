@@ -137,3 +137,18 @@ def run_migrations(engine):
 
         # Re-enable FK enforcement
         conn.execute(text("PRAGMA foreign_keys = ON"))
+
+
+def run_column_migrations(engine):
+    """
+    Add new columns to existing tables if they don't already exist.
+    Safe to run on every boot — checks before altering.
+    """
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table, col in [('tracked_movies', 'watchlisted'), ('tracked_shows', 'watchlisted')]:
+        existing_cols = {c['name'] for c in inspector.get_columns(table)} if table in existing_tables else set()
+        if col not in existing_cols:
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} BOOLEAN DEFAULT 0 NOT NULL"))

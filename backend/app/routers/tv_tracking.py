@@ -29,6 +29,7 @@ import os
 class ShowTrackingCreate(BaseModel):
     """Request model for creating or updating show tracking data."""
     favourited: Optional[bool] = False
+    watchlisted: Optional[bool] = False
     rating: Optional[int] = Field(default=0, ge=0, le=5)
     comment: Optional[str] = ""
 
@@ -36,6 +37,7 @@ class ShowTrackingCreate(BaseModel):
 class ShowTrackingUpdate(BaseModel):
     """Request model for partial updates to show tracking data."""
     favourited: Optional[bool] = None
+    watchlisted: Optional[bool] = None
     rating: Optional[int] = Field(default=None, ge=0, le=5)
     comment: Optional[str] = None
 
@@ -45,6 +47,7 @@ class ShowTrackingResponse(BaseModel):
     user_id: int
     tmdb_show_id: int
     favourited: bool
+    watchlisted: bool
     rating: int
     comment: str
     total_episodes: Optional[int]
@@ -128,6 +131,7 @@ def _show_response(s: TrackedShow) -> ShowTrackingResponse:
         user_id=s.user_id,
         tmdb_show_id=s.tmdb_show_id,
         favourited=s.favourited,
+        watchlisted=s.watchlisted,
         rating=s.rating,
         comment=s.comment,
         total_episodes=s.total_episodes,
@@ -143,6 +147,7 @@ def _show_response(s: TrackedShow) -> ShowTrackingResponse:
 async def get_tracked_shows(
     user_id: int,
     favourited: Optional[bool] = None,
+    watchlisted: Optional[bool] = None,
     rated: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
@@ -154,6 +159,9 @@ async def get_tracked_shows(
 
     if favourited is not None:
         query = query.filter(TrackedShow.favourited == favourited)
+
+    if watchlisted is not None:
+        query = query.filter(TrackedShow.watchlisted == watchlisted)
 
     if rated is not None:
         if rated:
@@ -197,6 +205,7 @@ async def track_show(
 
     if existing:
         existing.favourited = tracking_data.favourited
+        existing.watchlisted = tracking_data.watchlisted
         existing.rating = tracking_data.rating
         existing.comment = tracking_data.comment
         show = existing
@@ -219,6 +228,7 @@ async def track_show(
             user_id=user_id,
             tmdb_show_id=tmdb_id,
             favourited=tracking_data.favourited,
+            watchlisted=tracking_data.watchlisted,
             rating=tracking_data.rating,
             comment=tracking_data.comment,
             total_episodes=total_episodes,
@@ -255,6 +265,8 @@ async def update_show_tracking(
 
     if tracking_data.favourited is not None:
         show.favourited = tracking_data.favourited
+    if tracking_data.watchlisted is not None:
+        show.watchlisted = tracking_data.watchlisted
     if tracking_data.rating is not None:
         show.rating = tracking_data.rating
     if tracking_data.comment is not None:

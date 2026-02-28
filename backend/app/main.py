@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.database import engine, Base
-from app.migrations import run_migrations
+from app.migrations import run_migrations, run_column_migrations
 from app.routers import tmdb, tracking, tv_tracking, users
 
 
@@ -54,6 +54,7 @@ app.add_middleware(
 def startup_event():
     """Run migrations then create any missing tables on application startup."""
     run_migrations(engine)
+    run_column_migrations(engine)
     Base.metadata.create_all(bind=engine)
 
 

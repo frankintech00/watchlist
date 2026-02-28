@@ -50,6 +50,7 @@ class TrackedMovie(Base):
     tmdb_movie_id = Column(Integer, primary_key=True, nullable=False)
     watched = Column(Boolean, default=False, nullable=False)
     favourited = Column(Boolean, default=False, nullable=False)
+    watchlisted = Column(Boolean, default=False, nullable=False)
     rating = Column(Integer, default=0, nullable=False)  # 0-5 stars
     comment = Column(Text, default="", nullable=False)
     added_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow, nullable=False)
@@ -67,6 +68,7 @@ class TrackedShow(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, nullable=False)
     tmdb_show_id = Column(Integer, primary_key=True, nullable=False)
     favourited = Column(Boolean, default=False, nullable=False)
+    watchlisted = Column(Boolean, default=False, nullable=False)
     rating = Column(Integer, default=0, nullable=False)  # 0-5 stars
     comment = Column(Text, default="", nullable=False)
     added_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow, nullable=False)

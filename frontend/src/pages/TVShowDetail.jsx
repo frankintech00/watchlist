@@ -16,10 +16,11 @@ function TVShowDetail() {
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState(null)
 
-  const [favourited, setFavourited] = useState(false)
-  const [rating,     setRating]     = useState(0)
-  const [comment,    setComment]    = useState('')
-  const [saving,     setSaving]     = useState(false)
+  const [favourited,  setFavourited]  = useState(false)
+  const [watchlisted, setWatchlisted] = useState(false)
+  const [rating,      setRating]      = useState(0)
+  const [comment,     setComment]     = useState('')
+  const [saving,      setSaving]      = useState(false)
 
   const [mobileRatingOpen, setMobileRatingOpen] = useState(false)
   const [mobileNotesOpen,  setMobileNotesOpen]  = useState(false)
@@ -31,6 +32,7 @@ function TVShowDetail() {
         setEpisodes([])
         setTrackingData(null)
         setFavourited(false)
+        setWatchlisted(false)
         setRating(0)
         setComment('')
 
@@ -46,6 +48,7 @@ function TVShowDetail() {
         if (trackingInfo) {
           setTrackingData(trackingInfo)
           setFavourited(trackingInfo.favourited)
+          setWatchlisted(trackingInfo.watchlisted)
           setRating(trackingInfo.rating)
           setComment(trackingInfo.comment)
           const episodeData = await trackingAPI.shows.getEpisodes(id)
@@ -65,9 +68,10 @@ function TVShowDetail() {
     try {
       setSaving(true)
       const payload = {
-        favourited: updatedData.favourited ?? favourited,
-        rating:     updatedData.rating     ?? rating,
-        comment:    updatedData.comment    ?? comment,
+        favourited:  updatedData.favourited  ?? favourited,
+        watchlisted: updatedData.watchlisted ?? watchlisted,
+        rating:      updatedData.rating      ?? rating,
+        comment:     updatedData.comment     ?? comment,
       }
       if (trackingData) {
         await trackingAPI.shows.update(id, payload)
@@ -159,6 +163,12 @@ function TVShowDetail() {
     const next = !favourited
     setFavourited(next)
     autoSave({ favourited: next })
+  }
+
+  const toggleWatchlist = () => {
+    const next = !watchlisted
+    setWatchlisted(next)
+    autoSave({ watchlisted: next })
   }
 
   return (
@@ -274,6 +284,24 @@ function TVShowDetail() {
           {/* ── Mobile action bar ── */}
           <div className="px-4 pt-4 pb-2">
             <div className="flex items-start justify-around">
+
+              {/* Watchlist */}
+              <button onClick={toggleWatchlist} className="flex flex-col items-center gap-1.5">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                  watchlisted ? 'bg-blue-500/20' : 'bg-[#2a2a2a]'
+                }`}>
+                  <svg
+                    className={`w-5 h-5 transition-colors ${watchlisted ? 'text-blue-400' : 'text-white/60'}`}
+                    fill={watchlisted ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                  </svg>
+                </div>
+                <span className="text-[10px] text-white/40">Watchlist</span>
+              </button>
 
               {/* Favourite */}
               <button onClick={toggleFavourite} className="flex flex-col items-center gap-1.5">
@@ -468,6 +496,18 @@ function TVShowDetail() {
 
               {/* Action buttons */}
               <div className="flex items-center gap-3 mb-6 flex-wrap">
+                <button
+                  onClick={toggleWatchlist}
+                  className="nf-btn-secondary"
+                  style={watchlisted ? { color: '#60a5fa' } : {}}
+                >
+                  <svg fill={watchlisted ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}
+                    className="w-4 h-4" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                  </svg>
+                  Watchlist
+                </button>
+
                 <button onClick={toggleFavourite} className="nf-btn-secondary" style={favourited ? { color: '#facc15' } : {}}>
                   <span>★</span>
                   {favourited ? 'Favourited' : 'Favourite'}

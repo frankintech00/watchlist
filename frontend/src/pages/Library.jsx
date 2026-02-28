@@ -70,11 +70,7 @@ function Library() {
         item.watched_episodes < (item.total_episodes || Infinity)
       )
     } else if (activeFilter === 'to-watch') {
-      items = items.filter(item =>
-        item.media_type === 'movie'
-          ? item.favourited && !item.watched
-          : item.favourited && !(item.watched_episodes >= item.total_episodes && item.total_episodes > 0)
-      )
+      items = items.filter(item => item.watchlisted)
     }
 
     if (searchQuery.trim()) {
