@@ -27,7 +27,10 @@ SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Required for SQLite
+    connect_args={
+        "check_same_thread": False,  # Required for SQLite
+        "timeout": 15,  # Wait for locks instead of failing immediately with "database is locked"
+    }
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

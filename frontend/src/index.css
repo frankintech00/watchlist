@@ -7,31 +7,49 @@
   to   { opacity: 1; }
 }
 
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position: 400px 0; }
+}
+
 @layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-dark text-white font-sans antialiased;
+    @apply bg-ink text-fg font-sans antialiased;
     font-size: 16px;
     line-height: 1.5;
   }
 
-  /* Headings use DM Sans bold — Bebas Neue is only applied via font-logo on the wordmark */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-sans font-bold;
+  h1, h2, h3, h4 {
+    @apply font-bold;
+    letter-spacing: -0.01em;
   }
 
-  * {
-    box-sizing: border-box;
+  button, input, textarea, select {
+    font-family: inherit;
   }
 
-  /* Remove default focus outlines and replace with subtle accent ring */
   :focus-visible {
-    outline: 2px solid #E50914;
+    outline: 2px solid #f5b83d;
     outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: rgba(245, 184, 61, 0.35);
   }
 }
 
 @layer components {
-  /* ── Scrollbar ─────────────────────────────────── */
+  /* Page gutter shared by every section so rows line up */
+  .gutter {
+    @apply px-4 sm:px-6 lg:px-10;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -40,47 +58,66 @@
     display: none;
   }
 
-  /* ── Netflix-style buttons ─────────────────────── */
-  .nf-btn-primary {
-    @apply inline-flex items-center gap-2 px-6 py-2.5 rounded bg-white text-black font-semibold text-sm transition-opacity duration-150 hover:opacity-80 active:opacity-70;
+  /* ── Buttons ───────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-10 text-sm font-bold
+           whitespace-nowrap select-none transition-colors duration-150
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-accent-ink hover:bg-accent-deep;
+  }
+  .btn-quiet {
+    @apply btn bg-white/10 text-fg hover:bg-white/20;
+    backdrop-filter: blur(8px);
+  }
+  .btn-outline {
+    @apply btn border border-line text-fg hover:bg-raised hover:border-dim;
+  }
+  .btn-sm {
+    @apply h-8 px-3.5 text-xs;
+  }
+  .icon-btn {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-full text-muted
+           hover:text-fg hover:bg-raised transition-colors duration-150
+           disabled:opacity-30 disabled:pointer-events-none;
   }
 
-  .nf-btn-secondary {
-    @apply inline-flex items-center gap-2 px-6 py-2.5 rounded font-semibold text-sm text-white transition-opacity duration-150 hover:opacity-80;
-    background: rgba(109, 109, 110, 0.7);
+  /* ── Chips (filters, tabs) ─────────────────────── */
+  .chip {
+    @apply inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-xs font-bold whitespace-nowrap
+           border border-line text-muted hover:text-fg hover:border-dim transition-colors duration-150;
+  }
+  .chip-on {
+    @apply bg-fg text-ink border-fg hover:text-ink hover:border-fg;
   }
 
-  .nf-btn-icon {
-    @apply w-10 h-10 rounded-full border-2 border-white/60 flex items-center justify-center text-white transition-all duration-150 hover:border-white hover:scale-110;
+  /* ── Small labels ──────────────────────────────── */
+  .tag {
+    @apply inline-flex items-center h-6 px-2 rounded text-[11px] font-bold bg-raised text-muted;
+  }
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-accent;
+  }
+  .section-title {
+    @apply text-lg sm:text-xl font-bold text-fg;
   }
 
-  /* ── Card ──────────────────────────────────────── */
-  .nf-card {
-    @apply relative rounded overflow-hidden cursor-pointer transition-transform duration-200 ease-out;
+  /* ── Inputs ────────────────────────────────────── */
+  .input {
+    @apply w-full bg-raised border border-line text-fg placeholder-dim rounded-lg px-3.5 py-2.5 text-sm
+           focus:outline-none focus:border-accent transition-colors duration-150;
   }
 
-  .nf-card:hover {
-    @apply z-20;
-    transform: scale(1.15);
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.25);
+  /* ── Surfaces ──────────────────────────────────── */
+  .card {
+    @apply bg-panel border border-line rounded-xl;
   }
 
-  /* ── Tabs ──────────────────────────────────────── */
-  .nf-tab {
-    @apply px-4 py-2 text-sm font-semibold transition-colors duration-150 border-b-2 border-transparent text-[#999999] hover:text-white;
-  }
-
-  .nf-tab-active {
-    @apply text-white border-primary;
-  }
-
-  /* ── Section heading ───────────────────────────── */
-  .nf-row-title {
-    @apply text-white font-semibold text-base mb-3;
-  }
-
-  /* ── Input ─────────────────────────────────────── */
-  .nf-input {
-    @apply bg-[#333] border border-[#555] text-white placeholder-[#999] px-3 py-2 rounded text-sm focus:outline-none focus:border-white transition-colors duration-150;
+  .skeleton {
+    @apply rounded-lg;
+    background: linear-gradient(90deg, #131b25 0px, #1c2735 200px, #131b25 400px);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s linear infinite;
   }
 }

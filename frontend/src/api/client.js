@@ -1,6 +1,6 @@
 /**
- * Central API client for Watchlist application
- * Handles all HTTP requests with consistent error handling
+ * Central API client for Watchlist.
+ * Every request goes through fetchAPI for consistent error handling.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -12,11 +12,7 @@ export function setActiveUser(id) {
   _activeUserId = id
 }
 
-export function getActiveUser() {
-  return _activeUserId
-}
-
-class APIError extends Error {
+export class APIError extends Error {
   constructor(message, status, data) {
     super(message)
     this.name = 'APIError'
@@ -25,208 +21,96 @@ class APIError extends Error {
   }
 }
 
-/**
- * Generic fetch wrapper with error handling
- */
 async function fetchAPI(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`
-
+  let response
   try {
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
+      headers: options.body instanceof FormData
+        ? options.headers
+        : { 'Content-Type': 'application/json', ...options.headers },
     })
-
-    // Handle non-JSON responses or empty responses
-    const contentType = response.headers.get('content-type')
-    let data = null
-
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json()
-    }
-
-    if (!response.ok) {
-      throw new APIError(
-        data?.detail || `API request failed: ${response.statusText}`,
-        response.status,
-        data
-      )
-    }
-
-    return data
   } catch (error) {
-    if (error instanceof APIError) {
-      throw error
-    }
-    throw new APIError('Network error: Failed to connect to API', 0, null)
+    throw new APIError(`Network error: ${error.message || 'could not reach the server'}`, 0, null)
   }
+
+  const isJSON = (response.headers.get('content-type') || '').includes('application/json')
+  const data = isJSON ? await response.json() : null
+
+  if (!response.ok) {
+    const detail = typeof data?.detail === 'string' ? data.detail : null
+    throw new APIError(detail || `Request failed (${response.status})`, response.status, data)
+  }
+  return data
 }
 
-// === TMDB ENDPOINTS ===
+const json = (method, body) => ({ method, body: body === undefined ? undefined : JSON.stringify(body) })
+const user = () => `user_id=${_activeUserId}`
+
+// === TMDB (proxied) ===
 
 export const tmdbAPI = {
-  searchMovies: (query, page = 1) =>
-    fetchAPI(`/tmdb/search?query=${encodeURIComponent(query)}&page=${page}`),
+  search: (query, type = 'multi', page = 1) =>
+    fetchAPI(`/tmdb/search?query=${encodeURIComponent(query)}&type=${type}&page=${page}`),
+  trendingPeople: () => fetchAPI('/tmdb/trending/people'),
 
-  searchMulti: (query, page = 1) =>
-    fetchAPI(`/tmdb/search/multi?query=${encodeURIComponent(query)}&page=${page}`),
+  movie: (id) => fetchAPI(`/tmdb/movie/${id}`),
+  movieReviews: (id) => fetchAPI(`/tmdb/movie/${id}/reviews`),
 
-  getMovieDetail: (movieId) =>
-    fetchAPI(`/tmdb/movie/${movieId}`),
+  show: (id) => fetchAPI(`/tmdb/tv/${id}`),
+  season: (showId, seasonNumber) => fetchAPI(`/tmdb/tv/${showId}/season/${seasonNumber}`),
+  showReviews: (id) => fetchAPI(`/tmdb/tv/${id}/reviews`),
 
-  getTVShowDetail: (showId) =>
-    fetchAPI(`/tmdb/tv/${showId}`),
-
-  getTVSeasonDetail: (showId, seasonNumber) =>
-    fetchAPI(`/tmdb/tv/${showId}/season/${seasonNumber}`),
-
-  getMovieCredits: (movieId) =>
-    fetchAPI(`/tmdb/movie/${movieId}/credits`),
-
-  getUpcomingMovies: (page = 1) =>
-    fetchAPI(`/tmdb/movie/upcoming?page=${page}`),
-
-  getSimilarMovies: (movieId, page = 1) =>
-    fetchAPI(`/tmdb/movie/${movieId}/similar?page=${page}`),
-
-  getUpcomingTVShows: (page = 1) =>
-    fetchAPI(`/tmdb/tv/upcoming?page=${page}`),
-
-  getSimilarTVShows: (showId, page = 1) =>
-    fetchAPI(`/tmdb/tv/${showId}/similar?page=${page}`),
-
-  getPersonDetail: (personId) =>
-    fetchAPI(`/tmdb/person/${personId}`),
-
-  getMovieReviews: (movieId, page = 1) =>
-    fetchAPI(`/tmdb/movie/${movieId}/reviews?page=${page}`),
-
-  getTVShowReviews: (showId, page = 1) =>
-    fetchAPI(`/tmdb/tv/${showId}/reviews?page=${page}`),
+  person: (id) => fetchAPI(`/tmdb/person/${id}`),
 }
 
-// === USERS ENDPOINTS ===
+// === FILM DISCOVERY (UK) ===
+
+export const filmsAPI = {
+  streaming: (days = 90) => fetchAPI(`/films/streaming?days=${days}`),
+  upcoming: () => fetchAPI('/films/upcoming'),
+}
+
+// === USERS ===
 
 export const usersAPI = {
-  getAll: () =>
-    fetchAPI('/users/'),
-
-  create: ({ name }) =>
-    fetchAPI('/users/', {
-      method: 'POST',
-      body: JSON.stringify({ name }),
-    }),
-
-  delete: (userId) =>
-    fetchAPI(`/users/${userId}`, {
-      method: 'DELETE',
-    }),
-
-  uploadAvatar: async (userId, file) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/avatar`, {
-      method: 'POST',
-      body: formData,
-    })
-    const contentType = response.headers.get('content-type')
-    let data = null
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json()
-    }
-    if (!response.ok) {
-      throw new APIError(
-        data?.detail || `Avatar upload failed: ${response.statusText}`,
-        response.status,
-        data
-      )
-    }
-    return data
+  getAll: () => fetchAPI('/users/'),
+  create: ({ name }) => fetchAPI('/users/', json('POST', { name })),
+  delete: (userId) => fetchAPI(`/users/${userId}`, { method: 'DELETE' }),
+  uploadAvatar: (userId, file) => {
+    const body = new FormData()
+    body.append('file', file)
+    return fetchAPI(`/users/${userId}/avatar`, { method: 'POST', body })
   },
 }
 
-// === TRACKING ENDPOINTS ===
+// === TRACKING ===
+// Every title is either 'watching' or 'watched'.
 
 export const trackingAPI = {
-  // Films
-  getAll: (filters = {}) => {
-    const params = new URLSearchParams({ user_id: _activeUserId, ...filters }).toString()
-    return fetchAPI(`/tracking/?${params}`)
+  /** { tv: { [id]: status }, movie: { [id]: status } } */
+  ids: () => fetchAPI(`/tracking/ids?${user()}`),
+
+  shows: {
+    list: () => fetchAPI(`/tracking/shows?${user()}`),
+    get: (id) => fetchAPI(`/tracking/shows/${id}?${user()}`),
+    /** Track, or update { status, rating, comment } — only the fields given. */
+    save: (id, data = {}) => fetchAPI(`/tracking/shows/${id}?${user()}`, json('PUT', data)),
+    remove: (id) => fetchAPI(`/tracking/shows/${id}?${user()}`, { method: 'DELETE' }),
+
+    episodes: (id) => fetchAPI(`/tracking/shows/${id}/episodes?${user()}`),
+    markEpisodes: (id, episodes) =>
+      fetchAPI(`/tracking/shows/${id}/episodes?${user()}`, json('POST', { episodes })),
+    markSeason: (id, seasonNumber, watched) =>
+      fetchAPI(`/tracking/shows/${id}/season/${seasonNumber}/mark-watched?watched=${watched}&${user()}`, { method: 'POST' }),
+    markAllWatched: (id) =>
+      fetchAPI(`/tracking/shows/${id}/mark-all-watched?${user()}`, { method: 'POST' }),
   },
 
-  getById: (tmdbId) =>
-    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`),
-
-  track: (tmdbId, data) =>
-    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  update: (tmdbId, data) =>
-    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
-
-  delete: (tmdbId) =>
-    fetchAPI(`/tracking/${tmdbId}?user_id=${_activeUserId}`, {
-      method: 'DELETE',
-    }),
-
-  getRecommendations: () =>
-    fetchAPI(`/tracking/recommendations?user_id=${_activeUserId}`),
-
-  getStats: () =>
-    fetchAPI(`/tracking/stats?user_id=${_activeUserId}`),
-
-  // TV Shows
-  shows: {
-    getAll: (filters = {}) => {
-      const params = new URLSearchParams({ user_id: _activeUserId, ...filters }).toString()
-      return fetchAPI(`/tracking/shows?${params}`)
-    },
-
-    getById: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`),
-
-    track: (tmdbId, data) =>
-      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-
-    update: (tmdbId, data) =>
-      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-
-    delete: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}?user_id=${_activeUserId}`, {
-        method: 'DELETE',
-      }),
-
-    getEpisodes: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/episodes?user_id=${_activeUserId}`),
-
-    markEpisodes: (tmdbId, episodes) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/episodes?user_id=${_activeUserId}`, {
-        method: 'POST',
-        body: JSON.stringify({ episodes }),
-      }),
-
-    markSeason: (tmdbId, seasonNumber, watched) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/season/${seasonNumber}/mark-watched?watched=${watched}&user_id=${_activeUserId}`, {
-        method: 'POST',
-      }),
-
-    getProgress: (tmdbId) =>
-      fetchAPI(`/tracking/shows/${tmdbId}/progress?user_id=${_activeUserId}`),
+  movies: {
+    list: () => fetchAPI(`/tracking/movies?${user()}`),
+    get: (id) => fetchAPI(`/tracking/movies/${id}?${user()}`),
+    save: (id, data = {}) => fetchAPI(`/tracking/movies/${id}?${user()}`, json('PUT', data)),
+    remove: (id) => fetchAPI(`/tracking/movies/${id}?${user()}`, { method: 'DELETE' }),
   },
 }
-
-export { APIError }

@@ -25,6 +25,8 @@ services:
     environment:
       - DATABASE_PATH=/app/data/watchlist.db
       - TMDB_API_KEY=${TMDB_API_KEY}
+      # Optional: enables Rotten Tomatoes scores (free key from omdbapi.com)
+      - OMDB_API_KEY=${OMDB_API_KEY:-}
     networks:
       - watchlist-network
 

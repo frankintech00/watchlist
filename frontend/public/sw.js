@@ -2,7 +2,7 @@
 // No complex caching: all requests pass straight through to the network.
 // Watchlist runs on a local network so offline support is not needed.
 
-const CACHE_NAME = 'watchlist-v1'
+const CACHE_NAME = 'watchlist-v3'
 
 self.addEventListener('install', (event) => {
   // Activate immediately without waiting for existing clients to close

@@ -1,15 +1,59 @@
 /**
  * generate-icons.cjs
- * Generates PNG icons (192x192 and 512x512) for the Watchlist PWA.
- * Dark background (#141414) with a white "W" polygon.
- * Pure Node.js — no extra npm packages required.
+ * Draws the Watchlist app icon — an amber screen with a tick on it ("watched") —
+ * and writes it as PNGs for the PWA manifest plus an SVG favicon.
+ * Pure Node.js: shapes are signed-distance functions, anti-aliased by supersampling.
+ * Runs automatically before every build (see "prebuild" in package.json).
  */
 
 const zlib = require('zlib')
 const fs   = require('fs')
 const path = require('path')
 
-// ── CRC32 ────────────────────────────────────────────────────────────────────
+const INK   = [0x0b, 0x10, 0x16]
+const AMBER = [0xf5, 0xb8, 0x3d]
+
+// ── Geometry (unit square, 0-1) ───────────────────────────────────────────────
+
+const SCREEN = { x0: 0.18, y0: 0.24, x1: 0.82, y1: 0.68, r: 0.08 }
+const STAND  = { x0: 0.36, y0: 0.75, x1: 0.64, y1: 0.81, r: 0.03 }
+const TICK   = [[0.36, 0.46], [0.46, 0.56], [0.65, 0.36]]
+const TICK_HALF_WIDTH = 0.036
+const TILE_RADIUS = 0.22
+
+function roundedRect(px, py, { x0, y0, x1, y1, r }) {
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2
+  const dx = Math.abs(px - cx) - ((x1 - x0) / 2 - r)
+  const dy = Math.abs(py - cy) - ((y1 - y0) / 2 - r)
+  return Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0) - r
+}
+
+function segmentDistance(px, py, [ax, ay], [bx, by]) {
+  const vx = bx - ax, vy = by - ay
+  const t = Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy)))
+  return Math.hypot(px - (ax + vx * t), py - (ay + vy * t))
+}
+
+/** Colour of the icon at a point: [r, g, b, a]. */
+function sample(x, y, { maskable }) {
+  // Maskable icons are full-bleed with the artwork inside the central safe zone.
+  const scale = maskable ? 0.74 : 1
+  const u = (x - 0.5) / scale + 0.5
+  const v = (y - 0.5) / scale + 0.5
+
+  if (!maskable && roundedRect(x, y, { x0: 0, y0: 0, x1: 1, y1: 1, r: TILE_RADIUS }) > 0) {
+    return [0, 0, 0, 0]
+  }
+  const onTick = Math.min(
+    segmentDistance(u, v, TICK[0], TICK[1]),
+    segmentDistance(u, v, TICK[1], TICK[2]),
+  ) < TICK_HALF_WIDTH
+  if (roundedRect(u, v, SCREEN) < 0) return onTick ? [...INK, 255] : [...AMBER, 255]
+  if (roundedRect(u, v, STAND) < 0) return [...AMBER, 255]
+  return [...INK, 255]
+}
+
+// ── PNG encoding ──────────────────────────────────────────────────────────────
 
 const CRC_TABLE = new Uint32Array(256)
 for (let n = 0; n < 256; n++) {
@@ -24,120 +68,80 @@ function crc32(buf) {
   return (c ^ 0xFFFFFFFF) >>> 0
 }
 
-// ── PNG helpers ───────────────────────────────────────────────────────────────
-
-function uint32BE(n) {
-  return Buffer.from([(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF])
+function chunk(type, data) {
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data])
+  const length = Buffer.alloc(4); length.writeUInt32BE(data.length)
+  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body))
+  return Buffer.concat([length, body, crc])
 }
 
-function makeChunk(type, data) {
-  const typeBytes = Buffer.from(type, 'ascii')
-  const crcInput  = Buffer.concat([typeBytes, data])
-  return Buffer.concat([uint32BE(data.length), typeBytes, data, uint32BE(crc32(crcInput))])
-}
-
-function encodePNG(width, height, rgbPixels) {
+function encodePNG(size, rgba) {
   const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(width,  0)
-  ihdr.writeUInt32BE(height, 4)
-  ihdr[8]  = 8  // bit depth
-  ihdr[9]  = 2  // color type: RGB
-  ihdr[10] = 0  // compression method
-  ihdr[11] = 0  // filter method
-  ihdr[12] = 0  // interlace method
+  ihdr.writeUInt32BE(size, 0)
+  ihdr.writeUInt32BE(size, 4)
+  ihdr[8] = 8   // bit depth
+  ihdr[9] = 6   // colour type: RGBA
 
-  // Raw scanlines: filter byte (0 = None) followed by RGB triplets
-  const stride = 1 + width * 3
-  const raw    = Buffer.alloc(height * stride)
-  for (let y = 0; y < height; y++) {
-    raw[y * stride] = 0  // filter byte
-    for (let x = 0; x < width; x++) {
-      const pi = (y * width + x) * 3
-      const ri = y * stride + 1 + x * 3
-      raw[ri]     = rgbPixels[pi]
-      raw[ri + 1] = rgbPixels[pi + 1]
-      raw[ri + 2] = rgbPixels[pi + 2]
-    }
+  const stride = 1 + size * 4
+  const raw = Buffer.alloc(size * stride)
+  for (let y = 0; y < size; y++) {
+    rgba.copy(raw, y * stride + 1, y * size * 4, (y + 1) * size * 4)
   }
-
-  const compressed = zlib.deflateSync(raw, { level: 9 })
-  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
   return Buffer.concat([
-    sig,
-    makeChunk('IHDR', ihdr),
-    makeChunk('IDAT', compressed),
-    makeChunk('IEND', Buffer.alloc(0)),
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
   ])
 }
 
-// ── Point-in-polygon (ray casting) ───────────────────────────────────────────
-
-function pointInPolygon(px, py, poly) {
-  let inside = false
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i]
-    const [xj, yj] = poly[j]
-    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
-      inside = !inside
-    }
-  }
-  return inside
-}
-
-// ── W polygon (normalised 0-1 space) ─────────────────────────────────────────
-//
-//  Outer top-left → outer top-right → outer bottom-right → (inner points) → outer bottom-left
-//  Produces a thick serif-style W that reads clearly at 192 px and 512 px.
-
-const W_POLY_NORM = [
-  [0.05, 0.10],   // outer top-left
-  [0.23, 0.10],   // inner top-left
-  [0.40, 0.68],   // lower-left valley
-  [0.50, 0.44],   // centre peak
-  [0.60, 0.68],   // lower-right valley
-  [0.77, 0.10],   // inner top-right
-  [0.95, 0.10],   // outer top-right
-  [0.77, 0.90],   // outer bottom-right
-  [0.67, 0.90],   // inner bottom-right
-  [0.50, 0.63],   // centre bottom
-  [0.33, 0.90],   // inner bottom-left
-  [0.23, 0.90],   // outer bottom-left (was missing — closes the shape correctly)
-]
-
-// ── Icon generation ───────────────────────────────────────────────────────────
-
-function generateIcon(size) {
-  const pixels = new Uint8Array(size * size * 3)
-
-  const BG = [0x14, 0x14, 0x14]  // #141414
-  const FG = [0xFF, 0xFF, 0xFF]  // #FFFFFF
-
-  // Map normalised [0,1] coords into [pad, size-pad] pixel space
-  const pad   = Math.round(0.07 * size)
-  const inner = size - 2 * pad
-  const scaled = W_POLY_NORM.map(([x, y]) => [pad + x * inner, pad + y * inner])
-
+function render(size, options) {
+  const SS = 4  // 4x4 supersampling
+  const rgba = Buffer.alloc(size * size * 4)
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const color = pointInPolygon(x + 0.5, y + 0.5, scaled) ? FG : BG
-      const i = (y * size + x) * 3
-      pixels[i]     = color[0]
-      pixels[i + 1] = color[1]
-      pixels[i + 2] = color[2]
+      let r = 0, g = 0, b = 0, a = 0
+      for (let sy = 0; sy < SS; sy++) {
+        for (let sx = 0; sx < SS; sx++) {
+          const c = sample((x + (sx + 0.5) / SS) / size, (y + (sy + 0.5) / SS) / size, options)
+          r += c[0] * c[3]; g += c[1] * c[3]; b += c[2] * c[3]; a += c[3]
+        }
+      }
+      const i = (y * size + x) * 4
+      if (a > 0) { rgba[i] = r / a; rgba[i + 1] = g / a; rgba[i + 2] = b / a }
+      rgba[i + 3] = a / (SS * SS)
     }
   }
-
-  return encodePNG(size, size, pixels)
+  return encodePNG(size, rgba)
 }
 
-// ── Write icons ───────────────────────────────────────────────────────────────
+// ── SVG (favicon) — same geometry ─────────────────────────────────────────────
+
+const pct = (n) => +(n * 100).toFixed(2)
+const hex = (c) => '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('')
+const rect = (s, fill) =>
+  `<rect x="${pct(s.x0)}" y="${pct(s.y0)}" width="${pct(s.x1 - s.x0)}" height="${pct(s.y1 - s.y0)}" rx="${pct(s.r)}" fill="${fill}"/>`
+
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="${pct(TILE_RADIUS)}" fill="${hex(INK)}"/>
+  ${rect(SCREEN, hex(AMBER))}
+  ${rect(STAND, hex(AMBER))}
+  <path d="M${TICK.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(' L')}" fill="none" stroke="${hex(INK)}" stroke-width="${pct(TICK_HALF_WIDTH * 2)}" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`
+
+// ── Write files ───────────────────────────────────────────────────────────────
 
 const outDir = path.join(__dirname, '..', 'public', 'icons')
 fs.mkdirSync(outDir, { recursive: true })
 
-for (const size of [192, 512]) {
-  const png     = generateIcon(size)
-  const outPath = path.join(outDir, `icon-${size}.png`)
-  fs.writeFileSync(outPath, png)
-  console.log(`  ✓ ${outPath} (${png.length} bytes)`)
+const outputs = [
+  ['icon-192.png', render(192, { maskable: false })],
+  ['icon-512.png', render(512, { maskable: false })],
+  ['icon-maskable-512.png', render(512, { maskable: true })],
+  ['icon.svg', Buffer.from(svg)],
+]
+for (const [name, data] of outputs) {
+  fs.writeFileSync(path.join(outDir, name), data)
+  console.log(`  ✓ icons/${name} (${data.length} bytes)`)
 }

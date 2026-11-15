@@ -7,28 +7,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#E50914',
-          dark: '#b20710',
+        ink:    '#0b1016',   // page background
+        panel:  '#131b25',   // cards, sheets
+        raised: '#1c2735',   // hover / inputs
+        line:   '#293647',   // borders
+        fg:     '#e9eef5',   // primary text
+        muted:  '#94a3b8',   // secondary text
+        dim:    '#64748b',   // tertiary text
+        accent: {
+          DEFAULT: '#f5b83d',  // amber — actions, progress, "watching"
+          deep:    '#d99a1c',
+          ink:     '#1c1403',  // text on accent
         },
-        dark: {
-          DEFAULT: '#141414',
-          lighter: '#2a2a2a',
-          card: '#1f1f1f',
-        },
+        seen:   '#3ddc97',   // green — "watched", fresh scores
+        rotten: '#f0635c',   // red — low scores, destructive
       },
       fontFamily: {
-        logo: ['Bebas Neue', 'sans-serif'],
-        heading: ['DM Sans', 'sans-serif'],
-        sans: ['DM Sans', 'sans-serif'],
+        // Arial only (Helvetica / system sans where Arial is not installed)
+        sans: ['Arial', 'Helvetica', 'sans-serif'],
       },
-      fontSize: {
-        'hero': ['3.5rem', { lineHeight: '1.1', fontWeight: '700' }],
-        'row-title': ['1.1rem', { lineHeight: '1.4', fontWeight: '600' }],
-      },
-      transitionDuration: {
-        '150': '150ms',
-        '200': '200ms',
+      maxWidth: {
+        page: '1600px',
       },
     },
   },

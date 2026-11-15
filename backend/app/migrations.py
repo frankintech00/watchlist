@@ -141,14 +141,108 @@ def run_migrations(engine):
 
 def run_column_migrations(engine):
     """
-    Add new columns to existing tables if they don't already exist.
-    Safe to run on every boot — checks before altering.
+    v3 migration: collapse watched / watchlisted / favourited into a single
+    `status` column ('watching' | 'watched') on films and shows.
+
+    Idempotent — each step checks the live schema first, so it is safe on every boot
+    and on fresh databases (where the tables do not exist yet and create_all builds
+    them in their final shape).
+
+    Mapping:
+      films  watched                      -> 'watched'
+             otherwise (was on watchlist) -> 'watching'
+      shows  every counted episode seen   -> 'watched'
+             otherwise                    -> 'watching'
+    Rows carrying no information at all (never watched, not on the watchlist, not a
+    favourite, no rating, no note) were invisible leftovers of un-ticked buttons and
+    are removed rather than resurfacing as "watching".
     """
     inspector = inspect(engine)
     existing_tables = set(inspector.get_table_names())
 
-    for table, col in [('tracked_movies', 'watchlisted'), ('tracked_shows', 'watchlisted')]:
-        existing_cols = {c['name'] for c in inspector.get_columns(table)} if table in existing_tables else set()
-        if col not in existing_cols:
+    def columns(table):
+        return {c['name'] for c in inspect(engine).get_columns(table)}
+
+    def flag(cols, name):
+        """SQL expression for a legacy boolean column that may not exist."""
+        return name if name in cols else '0'
+
+    # ── Films ────────────────────────────────────────────────────────────────
+    if 'tracked_movies' in existing_tables and 'status' not in columns('tracked_movies'):
+        cols = columns('tracked_movies')
+        watched, wl, fav = flag(cols, 'watched'), flag(cols, 'watchlisted'), flag(cols, 'favourited')
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE tracked_movies ADD COLUMN status TEXT DEFAULT 'watched' NOT NULL"
+            ))
+            conn.execute(text(f"""
+                DELETE FROM tracked_movies
+                WHERE {watched} = 0 AND {wl} = 0 AND {fav} = 0 AND rating = 0 AND comment = ''
+            """))
+            conn.execute(text(f"""
+                UPDATE tracked_movies
+                SET status = CASE WHEN {watched} = 1 THEN 'watched' ELSE 'watching' END
+            """))
+
+    # ── Shows ────────────────────────────────────────────────────────────────
+    if 'tracked_shows' in existing_tables and 'status' not in columns('tracked_shows'):
+        cols = columns('tracked_shows')
+        wl, fav = flag(cols, 'watchlisted'), flag(cols, 'favourited')
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE tracked_shows ADD COLUMN status TEXT DEFAULT 'watching' NOT NULL"
+            ))
+            empty = f"""
+                watched_episodes = 0 AND {wl} = 0 AND {fav} = 0 AND rating = 0 AND comment = ''
+                AND NOT EXISTS (
+                    SELECT 1 FROM tracked_episodes e
+                    WHERE e.user_id = tracked_shows.user_id
+                      AND e.tmdb_show_id = tracked_shows.tmdb_show_id
+                      AND e.watched = 1
+                )
+            """
+            if 'tracked_episodes' in existing_tables:
+                # Explicit delete: FK cascades are not enforced on this connection.
+                conn.execute(text(f"""
+                    DELETE FROM tracked_episodes
+                    WHERE EXISTS (
+                        SELECT 1 FROM tracked_shows
+                        WHERE tracked_shows.user_id = tracked_episodes.user_id
+                          AND tracked_shows.tmdb_show_id = tracked_episodes.tmdb_show_id
+                          AND {empty}
+                    )
+                """))
+                conn.execute(text(f"DELETE FROM tracked_shows WHERE {empty}"))
+            conn.execute(text("""
+                UPDATE tracked_shows
+                SET status = CASE
+                    WHEN total_episodes IS NOT NULL AND total_episodes > 0
+                         AND watched_episodes >= total_episodes THEN 'watched'
+                    ELSE 'watching'
+                END
+            """))
+
+    # ── Drop the legacy flag columns ─────────────────────────────────────────
+    # They are NOT NULL; leaving them unmapped would break inserts on databases
+    # where they were created without an SQL default.
+    for table, legacy in [
+        ('tracked_movies', ('watched', 'favourited', 'watchlisted')),
+        ('tracked_shows', ('favourited', 'watchlisted')),
+    ]:
+        if table not in existing_tables:
+            continue
+        cols = columns(table)
+        for col in legacy:
+            if col in cols:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {col}"))
+
+    # ── Backfill NULL timestamps (tables built by run_migrations had no default) ──
+    for table in ('tracked_movies', 'tracked_shows'):
+        if table in existing_tables:
             with engine.begin() as conn:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} BOOLEAN DEFAULT 0 NOT NULL"))
+                conn.execute(text(
+                    f"UPDATE {table} SET added_at = COALESCE(added_at, updated_at, CURRENT_TIMESTAMP), "
+                    f"updated_at = COALESCE(updated_at, added_at, CURRENT_TIMESTAMP) "
+                    f"WHERE added_at IS NULL OR updated_at IS NULL"
+                ))

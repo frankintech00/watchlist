@@ -2,297 +2,159 @@
 ===================================================================================
 Script: tracking.py
 Purpose:
-    User tracking router for Watchlist application.
-    Handles CRUD operations for tracked movies including watched status,
-    ratings, comments, and favourites. All endpoints are scoped by user_id.
+    Film tracking router for Watchlist application.
+    A tracked film is either 'watching' or 'watched', with an optional personal
+    rating and note. All endpoints are scoped by user_id.
 
 Author: Frank Kelly
-Date: 22-02-2026
+Date: 15-11-2026
 ===================================================================================
 """
 
+from datetime import datetime
+from typing import Literal, Optional
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import func
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from sqlalchemy.orm import Session
+
 from app.database import get_db
-from app.models import TrackedMovie
-import httpx
-import os
+from app.models import TrackedMovie, TrackedShow, STATUS_WATCHED
+from app.tmdb_client import get_movie, gather_safe
 
 
 # === PYDANTIC MODELS ===
 
-class TrackingCreate(BaseModel):
-    """Request model for creating or updating tracking data."""
-    watched: Optional[bool] = False
-    favourited: Optional[bool] = False
-    watchlisted: Optional[bool] = False
-    rating: Optional[int] = Field(default=0, ge=0, le=5)
-    comment: Optional[str] = ""
-
-
-class TrackingUpdate(BaseModel):
-    """Request model for partial updates to tracking data."""
-    watched: Optional[bool] = None
-    favourited: Optional[bool] = None
-    watchlisted: Optional[bool] = None
+class MovieTrackingUpdate(BaseModel):
+    """Partial update. Creates the tracking record if the film is not tracked yet."""
+    status: Optional[Literal["watching", "watched"]] = None
     rating: Optional[int] = Field(default=None, ge=0, le=5)
     comment: Optional[str] = None
-
-
-class TrackingResponse(BaseModel):
-    """Response model for tracked movie data."""
-    user_id: int
-    tmdb_movie_id: int
-    watched: bool
-    favourited: bool
-    watchlisted: bool
-    rating: int
-    comment: str
-    added_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
 
 
 # === ROUTER INITIALISATION ===
 
 router = APIRouter()
 
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
-TMDB_BASE_URL = "https://api.themoviedb.org/3"
+
+# === HELPERS ===
+
+def _tracking_dict(m: TrackedMovie) -> dict:
+    return {
+        "user_id": m.user_id,
+        "tmdb_movie_id": m.tmdb_movie_id,
+        "status": m.status,
+        "rating": m.rating,
+        "comment": m.comment,
+        "added_at": m.added_at.isoformat() if m.added_at else '',
+        "updated_at": m.updated_at.isoformat() if m.updated_at else '',
+    }
 
 
-# === HELPER ===
-
-def _movie_response(m: TrackedMovie) -> TrackingResponse:
-    return TrackingResponse(
-        user_id=m.user_id,
-        tmdb_movie_id=m.tmdb_movie_id,
-        watched=m.watched,
-        favourited=m.favourited,
-        watchlisted=m.watchlisted,
-        rating=m.rating,
-        comment=m.comment,
-        added_at=m.added_at.isoformat() if m.added_at else '',
-        updated_at=m.updated_at.isoformat() if m.updated_at else '',
-    )
+def _get_movie_row(db: Session, user_id: int, tmdb_id: int) -> Optional[TrackedMovie]:
+    return db.query(TrackedMovie).filter(
+        TrackedMovie.user_id == user_id,
+        TrackedMovie.tmdb_movie_id == tmdb_id,
+    ).first()
 
 
-# === TRACKING ENDPOINTS ===
+# === ENDPOINTS ===
 
-@router.get("/", response_model=List[TrackingResponse])
+@router.get("/ids")
+async def get_tracked_ids(user_id: int, db: Session = Depends(get_db)):
+    """
+    Lightweight map of everything a user tracks: {"tv": {id: status}, "movie": {id: status}}.
+    Lets search, people and discovery pages badge titles without loading the full lists.
+    """
+    return {
+        "tv": dict(
+            db.query(TrackedShow.tmdb_show_id, TrackedShow.status)
+            .filter(TrackedShow.user_id == user_id).all()
+        ),
+        "movie": dict(
+            db.query(TrackedMovie.tmdb_movie_id, TrackedMovie.status)
+            .filter(TrackedMovie.user_id == user_id).all()
+        ),
+    }
+
+
+@router.get("/movies")
 async def get_tracked_movies(
     user_id: int,
-    watched: Optional[bool] = None,
-    favourited: Optional[bool] = None,
-    watchlisted: Optional[bool] = None,
-    rated: Optional[bool] = None,
-    db: Session = Depends(get_db)
+    status: Optional[Literal["watching", "watched"]] = None,
+    db: Session = Depends(get_db),
 ):
-    """
-    Fetch all tracked movies for a user with optional filters.
-    Used by library screen to display user's collection.
-    """
+    """All tracked films for a user, most recently updated first, with TMDB metadata."""
     query = db.query(TrackedMovie).filter(TrackedMovie.user_id == user_id)
-
-    if watched is not None:
-        query = query.filter(TrackedMovie.watched == watched)
-
-    if favourited is not None:
-        query = query.filter(TrackedMovie.favourited == favourited)
-
-    if watchlisted is not None:
-        query = query.filter(TrackedMovie.watchlisted == watchlisted)
-
-    if rated is not None:
-        if rated:
-            query = query.filter(TrackedMovie.rating > 0)
-        else:
-            query = query.filter(TrackedMovie.rating == 0)
-
+    if status:
+        query = query.filter(TrackedMovie.status == status)
     movies = query.order_by(TrackedMovie.updated_at.desc()).all()
-    return [_movie_response(m) for m in movies]
+
+    details = await gather_safe([get_movie(m.tmdb_movie_id) for m in movies])
+
+    items = []
+    for movie, detail in zip(movies, details):
+        detail = detail or {}
+        items.append({
+            **_tracking_dict(movie),
+            "id": movie.tmdb_movie_id,
+            "media_type": "movie",
+            "title": detail.get("title"),
+            "overview": detail.get("overview"),
+            "poster_path": detail.get("poster_path"),
+            "backdrop_path": detail.get("backdrop_path"),
+            "release_date": detail.get("release_date"),
+            "runtime": detail.get("runtime"),
+        })
+    return items
 
 
-# === STATISTICS ENDPOINTS ===
-
-@router.get("/stats")
-async def get_tracking_stats(user_id: int, db: Session = Depends(get_db)):
-    """
-    Calculate tracking statistics for a user's dashboard.
-    Returns counts of total tracked, watched, favourited, and rated films.
-    """
-    base = db.query(TrackedMovie).filter(TrackedMovie.user_id == user_id)
-
-    return {
-        "total_tracked": base.count(),
-        "watched": base.filter(TrackedMovie.watched == True).count(),
-        "favourited": base.filter(TrackedMovie.favourited == True).count(),
-        "watchlisted": base.filter(TrackedMovie.watchlisted == True).count(),
-        "rated": base.filter(TrackedMovie.rating > 0).count(),
-    }
-
-
-# === RECOMMENDATION ENDPOINTS ===
-
-@router.get("/recommendations")
-async def get_recommendations(user_id: int, db: Session = Depends(get_db)):
-    """
-    Generate personalised recommendations based on a user's viewing history.
-    Fetches highly-rated tracked movies (rating >= 4), queries TMDB for
-    similar titles, deduplicates, and filters out already tracked films.
-    Returns up to 20 recommended movies.
-    """
-    top_rated = db.query(TrackedMovie).filter(
-        TrackedMovie.user_id == user_id,
-        TrackedMovie.rating >= 4
-    ).all()
-
-    if not top_rated:
-        return []
-
-    tracked_ids = {
-        m.tmdb_movie_id
-        for m in db.query(TrackedMovie).filter(TrackedMovie.user_id == user_id).all()
-    }
-
-    similar_movies = {}
-
-    async with httpx.AsyncClient() as client:
-        for movie in top_rated:
-            try:
-                url = f"{TMDB_BASE_URL}/movie/{movie.tmdb_movie_id}/similar"
-                params = {"api_key": TMDB_API_KEY, "page": 1, "with_original_language": "en"}
-                response = await client.get(url, params=params, timeout=10.0)
-
-                if response.status_code == 200:
-                    data = response.json()
-                    for result in data.get("results", []):
-                        movie_id = result.get("id")
-                        if movie_id not in tracked_ids and movie_id not in similar_movies:
-                            similar_movies[movie_id] = result
-
-            except Exception as e:
-                print(f"Error fetching similar movies for {movie.tmdb_movie_id}: {e}")
-                continue
-
-    return list(similar_movies.values())[:20]
-
-
-@router.get("/{tmdb_id}", response_model=Optional[TrackingResponse])
+@router.get("/movies/{tmdb_id}")
 async def get_tracked_movie(tmdb_id: int, user_id: int, db: Session = Depends(get_db)):
-    """
-    Fetch tracking data for a specific movie for a user.
-    Returns None if movie is not tracked by this user.
-    """
-    movie = db.query(TrackedMovie).filter(
-        TrackedMovie.user_id == user_id,
-        TrackedMovie.tmdb_movie_id == tmdb_id,
-    ).first()
-
-    return _movie_response(movie) if movie else None
+    """Tracking data for one film, or null if this user is not tracking it."""
+    movie = _get_movie_row(db, user_id, tmdb_id)
+    return _tracking_dict(movie) if movie else None
 
 
-@router.post("/{tmdb_id}", response_model=TrackingResponse)
-async def track_movie(
+@router.put("/movies/{tmdb_id}")
+async def upsert_movie(
     tmdb_id: int,
     user_id: int,
-    tracking_data: TrackingCreate,
-    db: Session = Depends(get_db)
+    data: MovieTrackingUpdate,
+    db: Session = Depends(get_db),
 ):
     """
-    Add or update tracking data for a movie for a specific user.
-    Creates new record if not tracked, updates existing otherwise.
+    Track a film or update its status / rating / note. Only supplied fields change.
+    A newly tracked film defaults to 'watched'.
     """
-    existing = db.query(TrackedMovie).filter(
-        TrackedMovie.user_id == user_id,
-        TrackedMovie.tmdb_movie_id == tmdb_id,
-    ).first()
-
-    if existing:
-        existing.watched = tracking_data.watched
-        existing.favourited = tracking_data.favourited
-        existing.watchlisted = tracking_data.watchlisted
-        existing.rating = tracking_data.rating
-        existing.comment = tracking_data.comment
-        movie = existing
-    else:
+    movie = _get_movie_row(db, user_id, tmdb_id)
+    if not movie:
         movie = TrackedMovie(
-            user_id=user_id,
-            tmdb_movie_id=tmdb_id,
-            watched=tracking_data.watched,
-            favourited=tracking_data.favourited,
-            watchlisted=tracking_data.watchlisted,
-            rating=tracking_data.rating,
-            comment=tracking_data.comment,
+            user_id=user_id, tmdb_movie_id=tmdb_id,
+            status=STATUS_WATCHED, rating=0, comment="",
         )
         db.add(movie)
 
-    db.commit()
-    db.refresh(movie)
-    return _movie_response(movie)
-
-
-@router.patch("/{tmdb_id}", response_model=TrackingResponse)
-async def update_tracking(
-    tmdb_id: int,
-    user_id: int,
-    tracking_data: TrackingUpdate,
-    db: Session = Depends(get_db)
-):
-    """
-    Partially update tracking data for a movie.
-    Only updates fields that are provided. Returns 404 if not tracked.
-    """
-    movie = db.query(TrackedMovie).filter(
-        TrackedMovie.user_id == user_id,
-        TrackedMovie.tmdb_movie_id == tmdb_id,
-    ).first()
-
-    if not movie:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Movie with TMDB ID {tmdb_id} is not tracked by user {user_id}"
-        )
-
-    if tracking_data.watched is not None:
-        movie.watched = tracking_data.watched
-    if tracking_data.favourited is not None:
-        movie.favourited = tracking_data.favourited
-    if tracking_data.watchlisted is not None:
-        movie.watchlisted = tracking_data.watchlisted
-    if tracking_data.rating is not None:
-        movie.rating = tracking_data.rating
-    if tracking_data.comment is not None:
-        movie.comment = tracking_data.comment
+    if data.status is not None:
+        movie.status = data.status
+    if data.rating is not None:
+        movie.rating = data.rating
+    if data.comment is not None:
+        movie.comment = data.comment
+    movie.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(movie)
-    return _movie_response(movie)
+    return _tracking_dict(movie)
 
 
-@router.delete("/{tmdb_id}")
+@router.delete("/movies/{tmdb_id}")
 async def untrack_movie(tmdb_id: int, user_id: int, db: Session = Depends(get_db)):
-    """
-    Remove a movie from a user's tracked collection.
-    Returns 404 if movie is not currently tracked by this user.
-    """
-    movie = db.query(TrackedMovie).filter(
-        TrackedMovie.user_id == user_id,
-        TrackedMovie.tmdb_movie_id == tmdb_id,
-    ).first()
-
+    """Stop tracking a film."""
+    movie = _get_movie_row(db, user_id, tmdb_id)
     if not movie:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Movie with TMDB ID {tmdb_id} is not tracked by user {user_id}"
-        )
+        raise HTTPException(status_code=404, detail=f"Film {tmdb_id} is not tracked by user {user_id}")
 
     db.delete(movie)
     db.commit()
-
-    return {"message": "Movie untracked successfully", "tmdb_movie_id": tmdb_id}
+    return {"message": "Film untracked successfully", "tmdb_movie_id": tmdb_id}
