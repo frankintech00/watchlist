@@ -7,20 +7,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink:    '#0b1016',   // page background
-        panel:  '#131b25',   // cards, sheets
-        raised: '#1c2735',   // hover / inputs
-        line:   '#293647',   // borders
-        fg:     '#e9eef5',   // primary text
-        muted:  '#94a3b8',   // secondary text
-        dim:    '#64748b',   // tertiary text
+        // One hue throughout: every colour is a shade of the primary, #A1B5D8.
+        ink:    '#0d121b',   // page background
+        panel:  '#151c2a',   // cards, sheets
+        raised: '#1f2839',   // hover / inputs
+        line:   '#2e3a52',   // borders
+        fg:     '#e9eef8',   // primary text
+        muted:  '#96a6c4',   // secondary text
+        dim:    '#6b7b9c',   // tertiary text
         accent: {
-          DEFAULT: '#f5b83d',  // amber — actions, progress, "watching"
-          deep:    '#d99a1c',
-          ink:     '#1c1403',  // text on accent
+          DEFAULT: '#a1b5d8',  // primary — actions, progress, "watching"
+          deep:    '#8a9fc6',  // hover
+          ink:     '#0f1626',  // text on primary
         },
-        seen:   '#3ddc97',   // green — "watched", fresh scores
-        rotten: '#f0635c',   // red — low scores, destructive
+        seen:   '#dbe5f5',   // palest tint — "watched", high scores
+        rotten: '#f0635c',   // the one exception: errors and delete actions only
       },
       fontFamily: {
         // Arial only (Helvetica / system sans where Arial is not installed)

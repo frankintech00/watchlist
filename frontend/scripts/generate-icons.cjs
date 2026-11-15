@@ -1,6 +1,6 @@
 /**
  * generate-icons.cjs
- * Draws the Watchlist app icon — an amber screen with a tick on it ("watched") —
+ * Draws the Watchlist app icon — a screen in the app's primary colour with a tick on it ("watched") —
  * and writes it as PNGs for the PWA manifest plus an SVG favicon.
  * Pure Node.js: shapes are signed-distance functions, anti-aliased by supersampling.
  * Runs automatically before every build (see "prebuild" in package.json).
@@ -10,8 +10,8 @@ const zlib = require('zlib')
 const fs   = require('fs')
 const path = require('path')
 
-const INK   = [0x0b, 0x10, 0x16]
-const AMBER = [0xf5, 0xb8, 0x3d]
+const INK   = [0x0d, 0x12, 0x1b]
+const PRIMARY = [0xa1, 0xb5, 0xd8]  // the app's primary colour
 
 // ── Geometry (unit square, 0-1) ───────────────────────────────────────────────
 
@@ -48,8 +48,8 @@ function sample(x, y, { maskable }) {
     segmentDistance(u, v, TICK[0], TICK[1]),
     segmentDistance(u, v, TICK[1], TICK[2]),
   ) < TICK_HALF_WIDTH
-  if (roundedRect(u, v, SCREEN) < 0) return onTick ? [...INK, 255] : [...AMBER, 255]
-  if (roundedRect(u, v, STAND) < 0) return [...AMBER, 255]
+  if (roundedRect(u, v, SCREEN) < 0) return onTick ? [...INK, 255] : [...PRIMARY, 255]
+  if (roundedRect(u, v, STAND) < 0) return [...PRIMARY, 255]
   return [...INK, 255]
 }
 
@@ -124,8 +124,8 @@ const rect = (s, fill) =>
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="${pct(TILE_RADIUS)}" fill="${hex(INK)}"/>
-  ${rect(SCREEN, hex(AMBER))}
-  ${rect(STAND, hex(AMBER))}
+  ${rect(SCREEN, hex(PRIMARY))}
+  ${rect(STAND, hex(PRIMARY))}
   <path d="M${TICK.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(' L')}" fill="none" stroke="${hex(INK)}" stroke-width="${pct(TICK_HALF_WIDTH * 2)}" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `

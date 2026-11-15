@@ -7,7 +7,7 @@ import { img, scoreTone } from '../lib/format'
  *
  *   badge     node pinned top-left (e.g. <ScoreBadge />, <Badge>NEW</Badge>)
  *   status    'watching' | 'watched' — shows the tracked marker top-right
- *   progress  0-1 — amber bar along the bottom of the poster
+ *   progress  0-1 — bar along the bottom of the poster
  */
 export default function PosterCard({ to, title, poster, subtitle, badge, status, progress }) {
   const src = img(poster, 'w342')
@@ -39,7 +39,7 @@ export default function PosterCard({ to, title, poster, subtitle, badge, status,
   )
 }
 
-/** Small round marker: green tick = watched, amber dot = watching. */
+/** Small round marker: pale tick = watched, dot = watching. */
 export function TrackedMark({ status }) {
   if (status === 'watched') {
     return (

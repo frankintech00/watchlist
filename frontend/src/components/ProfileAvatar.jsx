@@ -9,7 +9,8 @@ const SIZE_CLASSES = {
   lg: 'w-28 h-28 text-4xl',
 }
 
-const COLORS = ['#d97706', '#0d9488', '#2563eb', '#7c3aed', '#db2777', '#059669', '#0891b2', '#c2410c']
+// Shades of the app's primary colour
+const COLORS = ['#4a6394', '#5d77a8', '#3b507c', '#6c84b3', '#324468', '#566f9f']
 
 function nameColor(name = '') {
   let hash = 0

@@ -6,8 +6,7 @@ A self-hosted app for keeping track of what you are **watching** and what you ha
 
 ### TV
 
-- **Recently updated** — a full-width carousel of the last five shows you touched.
-- **Watching** — the show you updated most recently is shown large, with its next episode and a one-tap "Watched S2 E4" button. Everything else you are watching sits in a carousel underneath.
+- **Watching** — a carousel of large cards for the seven shows you updated most recently, each with its next episode and a one-tap "Watched S2 E4" button. Every show you are watching sits in a poster carousel underneath.
 - **Watched** — a carousel of everything you have finished. Shows that have aired new episodes since are flagged **New episodes**.
 - **Episode tracking** — tick individual episodes, a whole season, or the entire show. Status follows your ticks automatically:
   - every aired episode ticked → the show moves to **Watched**
@@ -111,7 +110,7 @@ watchlist/
 │   │   ├── api/client.js      # all HTTP calls (tmdbAPI, filmsAPI, trackingAPI, usersAPI)
 │   │   ├── context/           # UserContext — the active profile
 │   │   ├── lib/               # formatting helpers, episode-progress maths
-│   │   ├── components/        # Header, Carousel, PosterCard, HeroCarousel, WatchingFeature,
+│   │   ├── components/        # Header, Carousel, PosterCard, WatchingFeature (carousel),
 │   │   │                      # SeasonList, TrackingControls, DetailParts, States, Icon
 │   │   ├── pages/             # TVHome, Films, ShowDetail, FilmDetail, Person, Search,
 │   │   │                      # ProfileScreen
@@ -141,7 +140,7 @@ watchlist/
 - **Metadata is not stored.** Titles, artwork and episode lists come from TMDB on demand. The backend caches TMDB responses in memory (stale copies are served instantly and refreshed in the background) and pre-loads every tracked title at startup, so list pages need a single request.
 - **Progress counts aired episodes only**, excluding specials, so a show can be completed while a future season is merely announced.
 - **The API keys stay on the server** — the browser only ever talks to `/api`.
-- **Look and feel** is defined in two places: the palette and font (Arial) in `frontend/tailwind.config.js`, and shared classes (`.btn-primary`, `.chip`, `.card`…) in `frontend/src/index.css`.
+- **Look and feel** is defined in two places: the palette (every colour is a shade of the primary, `#A1B5D8`) and font (Arial) in `frontend/tailwind.config.js`, and shared classes (`.btn-primary`, `.chip`, `.card`…) in `frontend/src/index.css`.
 
 ## Profiles
 

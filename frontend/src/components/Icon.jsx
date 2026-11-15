@@ -37,10 +37,10 @@ export default function Icon({ name, className = 'w-5 h-5', filled = false, stro
 export function Logo({ className = 'w-8 h-8' }) {
   return (
     <svg className={className} viewBox="0 0 100 100" aria-hidden="true">
-      <rect width="100" height="100" rx="22" fill="#f5b83d" />
-      <rect x="18" y="24" width="64" height="44" rx="8" fill="#0b1016" />
-      <rect x="36" y="75" width="28" height="6" rx="3" fill="#0b1016" />
-      <path d="M36 46 L46 56 L65 36" fill="none" stroke="#f5b83d" strokeWidth="7.2" strokeLinecap="round" strokeLinejoin="round" />
+      <rect width="100" height="100" rx="22" fill="#a1b5d8" />
+      <rect x="18" y="24" width="64" height="44" rx="8" fill="#0d121b" />
+      <rect x="36" y="75" width="28" height="6" rx="3" fill="#0d121b" />
+      <path d="M36 46 L46 56 L65 36" fill="none" stroke="#a1b5d8" strokeWidth="7.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

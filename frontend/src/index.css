@@ -34,13 +34,13 @@
   }
 
   :focus-visible {
-    outline: 2px solid #f5b83d;
+    outline: 2px solid #a1b5d8;
     outline-offset: 2px;
     border-radius: 4px;
   }
 
   ::selection {
-    background: rgba(245, 184, 61, 0.35);
+    background: rgba(161, 181, 216, 0.35);
   }
 }
 
@@ -116,7 +116,7 @@
 
   .skeleton {
     @apply rounded-lg;
-    background: linear-gradient(90deg, #131b25 0px, #1c2735 200px, #131b25 400px);
+    background: linear-gradient(90deg, #151c2a 0px, #1f2839 200px, #151c2a 400px);
     background-size: 800px 100%;
     animation: shimmer 1.4s linear infinite;
   }

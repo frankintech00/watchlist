@@ -69,7 +69,7 @@ export function Backdrop({ src }) {
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(to bottom, rgba(11,16,22,0.55) 0%, rgba(11,16,22,0.82) 32%, rgba(11,16,22,0.97) 58%, #0b1016 75%)',
+            'linear-gradient(to bottom, rgba(13,18,27,0.55) 0%, rgba(13,18,27,0.82) 32%, rgba(13,18,27,0.97) 58%, #0d121b 75%)',
         }}
       />
     </div>

@@ -65,7 +65,7 @@ export function scoreTone(score) {
   if (score == null) return 'text-muted'
   if (score >= 75) return 'text-seen'
   if (score >= 60) return 'text-accent'
-  return 'text-rotten'
+  return 'text-dim'
 }
 
 export const titlePath = (item) =>

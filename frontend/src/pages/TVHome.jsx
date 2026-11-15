@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { trackingAPI } from '../api/client'
 import Carousel from '../components/Carousel'
-import HeroCarousel from '../components/HeroCarousel'
 import PosterCard, { Badge } from '../components/PosterCard'
-import WatchingFeature from '../components/WatchingFeature'
+import WatchingCarousel from '../components/WatchingFeature'
 import { EmptyState, ErrorMessage, RowSkeleton } from '../components/States'
-import { episodeCode, parseUTC, shortDate, year } from '../lib/format'
+import { episodeCode, shortDate, year } from '../lib/format'
 
-const byUpdated = (a, b) => (parseUTC(b.updated_at)?.getTime() || 0) - (parseUTC(a.updated_at)?.getTime() || 0)
+const RECENT = 7   // large cards at the top of Watching
 
 /** TV — what you are watching and what you have watched. */
 export default function TVHome() {
@@ -24,17 +23,15 @@ export default function TVHome() {
   // Log the next episode straight from the home page, then fold the result back in
   const markWatched = useCallback(async (show, episode) => {
     const updated = await trackingAPI.shows.markEpisodes(show.id, [{ ...episode, watched: true }])
+    // Updated in place (not re-sorted) so the card you are on does not jump away
     setShows((current) =>
-      current
-        .map((s) => (s.id === show.id ? { ...s, ...updated, has_new_episodes: false } : s))
-        .sort(byUpdated)
+      current.map((s) => (s.id === show.id ? { ...s, ...updated, has_new_episodes: false } : s))
     )
   }, [])
 
-  const { recent, watching, watched } = useMemo(() => {
+  const { watching, watched } = useMemo(() => {
     const all = shows || []
     return {
-      recent: all.filter((s) => s.backdrop_path).slice(0, 5),
       watching: all.filter((s) => s.status === 'watching'),
       watched: all.filter((s) => s.status === 'watched'),
     }
@@ -44,8 +41,8 @@ export default function TVHome() {
 
   if (!shows) {
     return (
-      <div className="pt-24">
-        <div className="gutter mb-10"><div className="skeleton h-[46vh] min-h-[300px]" /></div>
+      <div className="pt-24 sm:pt-28">
+        <div className="gutter mb-10"><div className="skeleton h-[300px]" /></div>
         <RowSkeleton />
         <RowSkeleton />
       </div>
@@ -62,24 +59,23 @@ export default function TVHome() {
     )
   }
 
-  const [featured, ...others] = watching
+  // The list arrives most-recently-updated first
+  const recent = watching.slice(0, RECENT)
 
   return (
-    <div className="pb-16">
-      <HeroCarousel shows={recent} />
-
-      <div className={`max-w-page mx-auto ${recent.length === 0 ? 'pt-24' : ''}`}>
+    <div className="pt-24 sm:pt-28 pb-16">
+      <div className="max-w-page mx-auto">
         {/* ── Watching ── */}
         <div className="gutter flex items-baseline gap-3 mb-4">
           <h2 className="text-2xl sm:text-3xl font-bold">Watching</h2>
           <span className="text-sm text-dim font-bold">{watching.length}</span>
         </div>
 
-        {featured ? (
+        {watching.length > 0 ? (
           <>
-            <WatchingFeature show={featured} onMarkWatched={markWatched} />
-            <Carousel title="Also watching" count={others.length} expandable={others.length > 8}>
-              {others.map((show) => (
+            <WatchingCarousel shows={recent} onMarkWatched={markWatched} />
+            <Carousel title="All watching" count={watching.length} expandable={watching.length > 8}>
+              {watching.map((show) => (
                 <PosterCard
                   key={show.id}
                   to={`/tv/${show.id}`}

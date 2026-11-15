@@ -1,15 +1,73 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { tmdbAPI } from '../api/client'
 import Icon from './Icon'
 import { episodeCode, img, runtime, shortDate, timeAgo } from '../lib/format'
 
 /**
- * The large "pick up where you left off" card at the top of Watching:
- * the most recently updated show, its next episode, and a one-tap
- * "watched it" button so progress can be logged without opening the show.
+ * Carousel of large "pick up where you left off" cards — one per recently
+ * updated show. Swipe, use the arrows, or tap a dot.
  */
-export default function WatchingFeature({ show, onMarkWatched }) {
+export default function WatchingCarousel({ shows, onMarkWatched }) {
+  const scroller = useRef(null)
+  const [index, setIndex] = useState(0)
+
+  const onScroll = useCallback(() => {
+    const el = scroller.current
+    if (el) setIndex(Math.round(el.scrollLeft / el.clientWidth))
+  }, [])
+
+  const go = (i) => {
+    const el = scroller.current
+    if (el) el.scrollTo({ left: Math.max(0, Math.min(shows.length - 1, i)) * el.clientWidth, behavior: 'smooth' })
+  }
+
+  if (shows.length === 0) return null
+
+  return (
+    <section className="gutter mb-10" aria-roledescription="carousel" aria-label="Recently updated shows">
+      <div
+        ref={scroller}
+        onScroll={onScroll}
+        className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory rounded-xl"
+      >
+        {shows.map((show, i) => (
+          <div key={show.id} className="flex-none w-full snap-start" aria-hidden={i !== index}>
+            <WatchingCard show={show} onMarkWatched={onMarkWatched} active={i === index} />
+          </div>
+        ))}
+      </div>
+
+      {shows.length > 1 && (
+        <div className="flex items-center gap-2 mt-3">
+          {shows.map((show, i) => (
+            <button key={show.id} onClick={() => go(i)} aria-label={`Show ${show.name}`} aria-current={i === index} className="group py-2">
+              <span
+                className={`block h-1 rounded-full transition-all duration-300 ${
+                  i === index ? 'w-10 bg-accent' : 'w-5 bg-line group-hover:bg-dim'
+                }`}
+              />
+            </button>
+          ))}
+          <div className="ml-auto flex items-center gap-1">
+            <button onClick={() => go(index - 1)} disabled={index === 0} className="icon-btn" aria-label="Previous show">
+              <Icon name="left" className="w-4 h-4" strokeWidth={2.5} />
+            </button>
+            <button onClick={() => go(index + 1)} disabled={index === shows.length - 1} className="icon-btn" aria-label="Next show">
+              <Icon name="right" className="w-4 h-4" strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/**
+ * One large card: a show, its next episode, and a one-tap "watched it"
+ * button so progress can be logged without opening the show.
+ */
+function WatchingCard({ show, onMarkWatched, active }) {
   const [episode, setEpisode] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -45,11 +103,12 @@ export default function WatchingFeature({ show, onMarkWatched }) {
   const pct = show.aired_episodes > 0 ? Math.round((show.watched_episodes / show.aired_episodes) * 100) : 0
   const art = img(episode?.still_path, 'w780') || img(show.backdrop_path, 'w780')
   const to = `/tv/${show.id}`
+  const tab = active ? 0 : -1   // off-screen cards stay out of the tab order
 
   return (
-    <article className="gutter mb-6">
-      <div className="card overflow-hidden md:flex">
-        <Link to={to} className="relative block md:w-[46%] lg:w-[42%] flex-shrink-0 aspect-video md:aspect-auto md:min-h-[270px] bg-raised group">
+    <article className="h-full">
+      <div className="card overflow-hidden md:flex h-full">
+        <Link to={to} tabIndex={tab} className="relative block md:w-[46%] lg:w-[42%] flex-shrink-0 aspect-video md:aspect-auto md:min-h-[270px] bg-raised group">
           {art && (
             <img src={art} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
           )}
@@ -61,12 +120,11 @@ export default function WatchingFeature({ show, onMarkWatched }) {
 
         <div className="flex-1 min-w-0 p-5 sm:p-7 flex flex-col justify-center">
           <p className="eyebrow mb-2">
-            Pick up where you left off
-            <span className="text-dim font-normal normal-case tracking-normal"> · {timeAgo(show.updated_at)}</span>
+            Updated {timeAgo(show.updated_at)}
           </p>
 
           <h3 className="text-2xl sm:text-3xl font-bold leading-tight mb-3 truncate">
-            <Link to={to} className="hover:text-accent transition-colors">{show.name}</Link>
+            <Link to={to} tabIndex={tab} className="hover:text-accent transition-colors">{show.name}</Link>
           </h3>
 
           {next ? (
@@ -104,12 +162,12 @@ export default function WatchingFeature({ show, onMarkWatched }) {
 
           <div className="flex flex-wrap items-center gap-2.5">
             {next && (
-              <button onClick={mark} disabled={saving} className="btn-primary">
+              <button onClick={mark} disabled={saving} tabIndex={tab} className="btn-primary">
                 <Icon name="check" className="w-4 h-4" strokeWidth={3} />
                 {saving ? 'Saving…' : `Watched ${episodeCode(next)}`}
               </button>
             )}
-            <Link to={to} className="btn-outline">All episodes</Link>
+            <Link to={to} tabIndex={tab} className="btn-outline">All episodes</Link>
           </div>
           {error && <p className="text-xs text-rotten mt-2" role="alert">Could not save: {error}</p>}
         </div>
