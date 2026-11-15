@@ -108,9 +108,9 @@ function WatchingCard({ show, onMarkWatched, active }) {
   return (
     <article className="h-full">
       <div className="card overflow-hidden md:flex h-full">
-        <Link to={to} tabIndex={tab} className="relative block md:w-[46%] lg:w-[42%] flex-shrink-0 aspect-video md:aspect-auto md:min-h-[270px] bg-raised group">
+        <Link to={to} tabIndex={tab} className="relative block md:w-[46%] lg:w-[42%] flex-shrink-0 aspect-video md:aspect-auto md:min-h-[270px] bg-raised">
           {art && (
-            <img src={art} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+            <img src={art} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-panel via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-panel" />
           <div className="absolute inset-x-0 bottom-0 h-1 bg-black/50 md:hidden">
@@ -124,7 +124,7 @@ function WatchingCard({ show, onMarkWatched, active }) {
           </p>
 
           <h3 className="text-2xl sm:text-3xl font-bold leading-tight mb-3 truncate">
-            <Link to={to} tabIndex={tab} className="hover:text-accent transition-colors">{show.name}</Link>
+            <Link to={to} tabIndex={tab}>{show.name}</Link>
           </h3>
 
           {next ? (

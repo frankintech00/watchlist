@@ -9,7 +9,8 @@ services:
       - "3000:80"
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - watchlist-network
 
@@ -27,6 +28,13 @@ services:
       - TMDB_API_KEY=${TMDB_API_KEY}
       # Optional: enables Rotten Tomatoes scores (free key from omdbapi.com)
       - OMDB_API_KEY=${OMDB_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+      start_interval: 1s
     networks:
       - watchlist-network
 

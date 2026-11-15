@@ -21,17 +21,36 @@ export class APIError extends Error {
   }
 }
 
+// The API is briefly unreachable while the backend container restarts (nginx answers
+// 502/503/504). Reads are safe to repeat, so retry them quietly instead of showing an error.
+const RETRY_DELAYS = [400, 1000, 2000, 3000]
+const RETRY_STATUSES = new Set([502, 503, 504])
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 async function fetchAPI(endpoint, options = {}) {
+  const isRead = !options.method || options.method === 'GET'
   let response
-  try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: options.body instanceof FormData
-        ? options.headers
-        : { 'Content-Type': 'application/json', ...options.headers },
-    })
-  } catch (error) {
-    throw new APIError(`Network error: ${error.message || 'could not reach the server'}`, 0, null)
+  for (let attempt = 0; ; attempt++) {
+    const canRetry = isRead && attempt < RETRY_DELAYS.length
+    try {
+      response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: options.body instanceof FormData
+          ? options.headers
+          : { 'Content-Type': 'application/json', ...options.headers },
+      })
+    } catch (error) {
+      if (canRetry) {
+        await sleep(RETRY_DELAYS[attempt])
+        continue
+      }
+      throw new APIError(`Network error: ${error.message || 'could not reach the server'}`, 0, null)
+    }
+    if (canRetry && RETRY_STATUSES.has(response.status)) {
+      await sleep(RETRY_DELAYS[attempt])
+      continue
+    }
+    break
   }
 
   const isJSON = (response.headers.get('content-type') || '').includes('application/json')
@@ -39,7 +58,10 @@ async function fetchAPI(endpoint, options = {}) {
 
   if (!response.ok) {
     const detail = typeof data?.detail === 'string' ? data.detail : null
-    throw new APIError(detail || `Request failed (${response.status})`, response.status, data)
+    const fallback = RETRY_STATUSES.has(response.status)
+      ? 'The server is restarting — try again in a moment'
+      : `Request failed (${response.status})`
+    throw new APIError(detail || fallback, response.status, data)
   }
   return data
 }
