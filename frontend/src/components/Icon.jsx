@@ -1,6 +1,7 @@
 /** Stroke icons (24px grid). <Icon name="check" className="w-4 h-4" /> */
 
 const PATHS = {
+  bookmark: 'M6 3h12v18l-6-4-6 4V3z',
   popcorn: 'M5 10h14l-2 11H7L5 10zM9 13l1 5M15 13l-1 5M5 10a3 3 0 01-1-5 3 3 0 015-2 3 3 0 016 0 3 3 0 015 2 3 3 0 01-1 5M9 7a3 3 0 016 0',
   tomato: 'M12 7C6 4 2 9 3 15c1 7 17 7 18 0 1-6-3-11-9-8zM12 7V2M7 5l5 2-3 4M17 5l-5 2 3 4',
   check: 'M5 12.5l4.5 4.5L19 7.5',

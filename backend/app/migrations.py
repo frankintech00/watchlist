@@ -222,6 +222,14 @@ def run_column_migrations(engine):
                 END
             """))
 
+    # Films are planned or watched; TV keeps its in-progress watching status.
+    # Change only the status so ratings, notes and sorting timestamps survive.
+    if 'tracked_movies' in existing_tables:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "UPDATE tracked_movies SET status = 'want_to_watch' WHERE status = 'watching'"
+            ))
+
     # ── Drop the legacy flag columns ─────────────────────────────────────────
     # They are NOT NULL; leaving them unmapped would break inserts on databases
     # where they were created without an SQL default.

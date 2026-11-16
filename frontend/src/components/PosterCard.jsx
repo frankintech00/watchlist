@@ -6,7 +6,7 @@ import { img, scoreTone } from '../lib/format'
  * Poster with a title and one line of detail underneath.
  *
  *   badge     node pinned top-left (e.g. <ScoreBadge />, <Badge>NEW</Badge>)
- *   status    'watching' | 'watched' — shows the tracked marker top-right
+ *   status    'watching' | 'want_to_watch' | 'watched' — marker top-right
  *   progress  0-1 — bar along the bottom of the poster
  */
 export default function PosterCard({ to, title, poster, subtitle, badge, status, progress, ratings }) {
@@ -40,8 +40,15 @@ export default function PosterCard({ to, title, poster, subtitle, badge, status,
   )
 }
 
-/** Small round marker: pale tick = watched, dot = watching. */
+/** Small marker: tick = watched, bookmark = want to watch, dot = TV watching. */
 export function TrackedMark({ status }) {
+  if (status === 'want_to_watch') {
+    return (
+      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-ink/85 text-accent shadow" title="Want to watch" aria-label="Want to watch">
+        <Icon name="bookmark" className="w-3 h-3" strokeWidth={2.5} />
+      </span>
+    )
+  }
   if (status === 'watched') {
     return (
       <span className="flex items-center justify-center w-5 h-5 rounded-full bg-seen text-ink shadow" title="Watched">

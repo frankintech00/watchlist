@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import Icon from './Icon'
 
 /**
- * The one decision the app asks for: are you watching this, or have you watched it?
+ * TV: watching/watched. Films: want to watch/watched.
  *
- *   status    'watching' | 'watched' | null (not tracked)
+ *   status    'watching' | 'want_to_watch' | 'watched' | null (not tracked)
  *   onSet     (status) => Promise
  *   onRemove  () => Promise
  */
-export function StatusControl({ status, onSet, onRemove, busy = false }) {
+export function StatusControl({ status, onSet, onRemove, busy = false, mediaType = 'tv' }) {
   const options = [
-    { value: 'watching', label: 'Watching', icon: 'play', on: 'bg-accent text-accent-ink border-accent' },
+    { value: mediaType === 'movie' ? 'want_to_watch' : 'watching', label: mediaType === 'movie' ? 'Want to watch' : 'Watching', icon: mediaType === 'movie' ? 'bookmark' : 'play', on: 'bg-accent text-accent-ink border-accent' },
     { value: 'watched', label: 'Watched', icon: 'check', on: 'bg-seen text-ink border-seen' },
   ]
 

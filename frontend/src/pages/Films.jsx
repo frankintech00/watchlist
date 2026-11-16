@@ -89,7 +89,7 @@ export default function Films() {
 
   const shownBands = BANDS.filter((b) => bands.has(b.id))
   const nothingShown = streaming && shownBands.every((b) => counts[b.id] === 0)
-  const watching = (mine || []).filter((m) => m.status === 'watching')
+  const wantToWatch = (mine || []).filter((m) => m.status === 'want_to_watch')
   const watched = (mine || []).filter((m) => m.status === 'watched')
 
   return (
@@ -201,14 +201,14 @@ export default function Films() {
       </Carousel>
 
       {/* ── Your films ── */}
-      {(watching.length > 0 || watched.length > 0) && (
+      {(wantToWatch.length > 0 || watched.length > 0) && (
         <div className="gutter border-t border-line pt-8 mb-6">
           <h2 className="text-2xl sm:text-3xl font-bold">Your films</h2>
         </div>
       )}
-      <Carousel title="Watching" count={watching.length} expandable={watching.length > 8}>
-        {watching.map((film) => (
-          <PosterCard key={film.id} to={`/movie/${film.id}`} title={film.title || 'Untitled'} poster={film.poster_path} subtitle={year(film.release_date)} />
+      <Carousel title="Want to watch" count={wantToWatch.length} expandable={wantToWatch.length > 8}>
+        {wantToWatch.map((film) => (
+          <PosterCard key={film.id} to={`/movie/${film.id}`} title={film.title || 'Untitled'} poster={film.poster_path} subtitle={year(film.release_date)} status="want_to_watch" />
         ))}
       </Carousel>
       <Carousel title="Watched" count={watched.length} expandable={watched.length > 8}>

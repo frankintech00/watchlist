@@ -3,7 +3,7 @@
 Script: tracking.py
 Purpose:
     Film tracking router for Watchlist application.
-    A tracked film is either 'watching' or 'watched', with an optional personal
+    A tracked film is either 'want_to_watch' or 'watched', with an optional personal
     rating and note. All endpoints are scoped by user_id.
 
 Author: Frank Kelly
@@ -27,7 +27,7 @@ from app.tmdb_client import get_movie, gather_safe
 
 class MovieTrackingUpdate(BaseModel):
     """Partial update. Creates the tracking record if the film is not tracked yet."""
-    status: Optional[Literal["watching", "watched"]] = None
+    status: Optional[Literal["want_to_watch", "watched"]] = None
     rating: Optional[int] = Field(default=None, ge=0, le=5)
     comment: Optional[str] = None
 
@@ -81,7 +81,7 @@ async def get_tracked_ids(user_id: int, db: Session = Depends(get_db)):
 @router.get("/movies")
 async def get_tracked_movies(
     user_id: int,
-    status: Optional[Literal["watching", "watched"]] = None,
+    status: Optional[Literal["want_to_watch", "watched"]] = None,
     db: Session = Depends(get_db),
 ):
     """All tracked films for a user, most recently updated first, with TMDB metadata."""

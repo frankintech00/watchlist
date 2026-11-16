@@ -107,7 +107,7 @@ export const usersAPI = {
 }
 
 // === TRACKING ===
-// Every title is either 'watching' or 'watched'.
+// Films: 'want_to_watch'/'watched'. TV: 'watching'/'watched'.
 
 export const trackingAPI = {
   /** { tv: { [id]: status }, movie: { [id]: status } } */

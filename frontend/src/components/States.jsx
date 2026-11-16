@@ -57,13 +57,19 @@ export function EmptyState({ title, children, action = true }) {
 }
 
 /** Fixed full-page artwork behind a detail page, fading into the background colour. */
-export function Backdrop({ src }) {
+export function Backdrop({ src, portrait = false }) {
   if (!src) return null
   return (
     <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
       <div
-        className="absolute inset-0 bg-cover bg-top opacity-70"
-        style={{ backgroundImage: `url(${src})`, animation: 'fadeIn 1s ease-out' }}
+        className={`absolute bg-cover bg-top opacity-70 ${portrait ? 'inset-y-0 right-0 w-full sm:w-2/3' : 'inset-0'}`}
+        style={{
+          backgroundImage: `url(${src})`,
+          ...(portrait ? {
+            maskImage: 'linear-gradient(to right, transparent, black 25%, black 75%, transparent)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent, black 25%, black 75%, transparent)',
+          } : {}),
+        }}
       />
       <div
         className="absolute inset-0"

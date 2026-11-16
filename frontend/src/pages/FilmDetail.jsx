@@ -71,7 +71,7 @@ export default function FilmDetail() {
 
   return (
     <div className="relative min-h-screen">
-      <Backdrop src={img(film.backdrop_path, 'w1280')} />
+      <Backdrop src={img(film.backdrop_path || film.poster_path, film.backdrop_path ? 'w1280' : 'original')} portrait={!film.backdrop_path} />
 
       <div className="relative z-10 max-w-page mx-auto pt-20 sm:pt-28 pb-16">
         <div className="gutter grid grid-cols-[6.5rem_1fr] md:grid-cols-[14rem_1fr] gap-x-4 md:gap-x-10 gap-y-5 mb-10">
@@ -107,7 +107,7 @@ export default function FilmDetail() {
 
           <div className="col-span-2 md:col-span-1 min-w-0 space-y-5">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusControl status={tracking?.status || null} onSet={setStatus} onRemove={remove} busy={busy} />
+              <StatusControl mediaType="movie" status={tracking?.status || null} onSet={setStatus} onRemove={remove} busy={busy} />
               <TrailerButton videoKey={film.trailer_key} />
             </div>
 

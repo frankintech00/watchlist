@@ -1,6 +1,6 @@
 # Watchlist
 
-A self-hosted app for keeping track of what you are **watching** and what you have **watched**. TV and films are kept separate, every title has exactly one status, and it all runs from a single household server.
+A self-hosted app for keeping track of TV you are **watching**, films you **want to watch**, and what you have **watched**. TV and films are kept separate, every title has exactly one status, and it all runs from a single household server.
 
 ## What it does
 
@@ -17,13 +17,14 @@ A self-hosted app for keeping track of what you are **watching** and what you ha
 - **New on streaming in the UK** — films released digitally in the last 1, 3 or 6 months that are on a UK subscription service right now. With MDBList configured, films rank by **Rotten Tomatoes audience score (Popcornmeter)** by default, highest first, in score bands (90%+, 75–89%, 60–74%, under 60%, no score). Switch to **Critics** to rank by Tomatometer instead, or filter by streaming service.
 - **Both Rotten Tomatoes scores** appear on streaming film cards and detail pages: a popcorn icon for audience scores and a tomato icon for critics. Missing scores appear as a dash; they are never replaced by IMDb or TMDB ratings. Films without the selected score are in **No score**, which can be enabled in the filters.
 - **Coming soon** — UK cinema and digital releases over the next four months, with dates.
-- **Your films** — mark any film as Watching or Watched.
+- **Your films** — mark any film as **Want to watch** or **Watched**. Planned films have a bookmark marker; watched films have a tick. The film detail page lets you switch between the two or remove a film from your list.
 
 ### People and search
 
 - **Search** shows, films and people, with tabs for each. Titles already on your list are marked.
 - **Person pages** show a complete filmography (acting and behind-the-camera credits, one row per title), what they are best known for, and which of their titles are on your list. Filter by films/TV, sort by date, fame or rating, and hide chat-show appearances.
 - Cast, creators, directors and episode guest stars all link through to their person page.
+- Actor/person and film detail pages share TV's shaded artwork background. Person portraits fade at the sides and into the page; films use landscape artwork with a poster fallback when no backdrop is available.
 
 ### Also
 
@@ -144,7 +145,7 @@ watchlist/
 
 ### How it fits together
 
-- **One status per title.** `tracked_shows.status` and `tracked_movies.status` are either `watching` or `watched`. There are no separate watchlist or favourite flags.
+- **One status per title.** Films use `want_to_watch` or `watched`; TV shows use `watching` or `watched`. Film tracking updates and status filters accept only the two film statuses. There are no separate watchlist or favourite flags.
 - **Metadata is not stored.** Titles, artwork and episode lists come from TMDB on demand. The backend caches TMDB responses in memory (stale copies are served instantly and refreshed in the background) and pre-loads every tracked title at startup, so list pages need a single request.
 - **Progress counts aired episodes only**, excluding specials, so a show can be completed while a future season is merely announced.
 - **The API keys stay on the server** — the browser only ever talks to `/api`.
@@ -160,21 +161,24 @@ watchlist/
 
 ## Upgrading from version 2
 
-Version 3 replaced *watched / to watch / favourites* with the single watching-or-watched status. The migration runs automatically on first start and is safe to re-run:
+Version 3 replaced *watched / to watch / favourites* with a single status. Films now use Want to watch / Watched, while TV retains Watching / Watched. The migration runs automatically on first start and is safe to re-run:
 
 | Before | After |
 |---|---|
 | Film marked watched | Watched |
-| Film on the watchlist, not watched | Watching |
+| Film on the watchlist, not watched | Want to watch |
+| Film previously marked Watching | Want to watch |
 | Show with every counted episode ticked | Watched |
 | Any other show with ticks, or on the watchlist | Watching |
 | Entries with nothing on them — no ticks, not on the watchlist, not a favourite, no rating or note | Removed |
 
 Episode ticks, ratings and notes are kept. The favourite and watchlist columns are dropped. **Back up `data/watchlist.db` before upgrading** if you may want to roll back.
 
+The film status rename preserves each film's rating, note and timestamps. It does not change TV tracking or episode progress. Refresh open browser tabs after upgrading to load the new film controls.
+
 ## Notes
 
-- Backend ratings regression tests (no external requests): `docker compose run --rm --no-deps -v ./backend/tests:/app/tests backend python -m unittest discover -s tests -v`.
+- Backend regression tests, including ratings and film status migration (no external requests): `docker compose run --rm --no-deps -v ./backend/tests:/app/tests backend python -m unittest discover -s tests -v`.
 - The additional `film_mdb_ratings` cache table is created automatically at startup; existing tracking data and OMDb cache entries are preserved.
 
 - `data/` is bind-mounted into the backend container and holds the database and avatar images. Back it up to back up everything.

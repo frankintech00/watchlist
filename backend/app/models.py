@@ -3,7 +3,7 @@
 Script: models.py
 Purpose:
     SQLAlchemy models for Watchlist database.
-    Every tracked title has exactly one status: 'watching' or 'watched'.
+    Films use 'want_to_watch' or 'watched'; TV uses 'watching' or 'watched'.
     All tracking data is scoped per user via composite primary keys.
 
 Author: Frank Kelly

@@ -4,7 +4,7 @@ import { tmdbAPI, trackingAPI } from '../api/client'
 import Carousel from '../components/Carousel'
 import Icon from '../components/Icon'
 import PosterCard, { TrackedMark } from '../components/PosterCard'
-import { ErrorMessage, PageLoading } from '../components/States'
+import { Backdrop, ErrorMessage, PageLoading } from '../components/States'
 import { img, longDate, plural, titlePath, year } from '../lib/format'
 
 const SORTS = {
@@ -96,7 +96,9 @@ export default function Person() {
   ].filter((r) => r.count > 0)
 
   return (
-    <div className="max-w-page mx-auto pt-20 sm:pt-28 pb-16">
+    <div className="relative min-h-screen">
+      <Backdrop src={img(person.profile_path, 'original')} portrait />
+      <div className="relative z-10 max-w-page mx-auto pt-20 sm:pt-28 pb-16">
       {/* ── Profile ── */}
       <div className="gutter grid grid-cols-[6.5rem_1fr] md:grid-cols-[14rem_1fr] gap-x-4 md:gap-x-10 gap-y-5 mb-10">
         <div className="md:row-span-2">
@@ -221,6 +223,7 @@ export default function Person() {
           </ul>
         )}
       </section>
+      </div>
     </div>
   )
 }
