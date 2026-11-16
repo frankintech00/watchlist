@@ -24,7 +24,7 @@ A self-hosted app for keeping track of TV you are **watching**, films you **want
 - **Search** shows, films and people, with tabs for each. Titles already on your list are marked.
 - **Person pages** show a complete filmography (acting and behind-the-camera credits, one row per title), what they are best known for, and which of their titles are on your list. Filter by films/TV, sort by date, fame or rating, and hide chat-show appearances.
 - Cast, creators, directors and episode guest stars all link through to their person page.
-- Actor/person and film detail pages share TV's shaded artwork background. Person portraits fade at the sides and into the page; films use landscape artwork with a poster fallback when no backdrop is available.
+- Actor/person and film detail pages share TV's shaded artwork background. Person pages use the poster from the first **Best known for** title, fading at the sides and into the page; if there is no poster, the background stays plain. Films use landscape artwork with a poster fallback when no backdrop is available.
 
 ### Also
 
