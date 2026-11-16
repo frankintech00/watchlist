@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app import mdblist
 from app.ratings import ratings_for, rt_enabled, tmdb_score
 from app.tmdb_client import fetch_tmdb, get_movie, gather_safe, uk_providers, REGION, TTL_LIST
 
@@ -79,7 +80,8 @@ async def new_on_streaming(
     available on a UK subscription service right now.
 
     Each film carries `score` (0-100 or null) and the response says where scores
-    come from: 'rt' (Rotten Tomatoes Tomatometer, via OMDb) or 'tmdb' (fallback).
+    come from: 'rt_audience' (MDBList Popcornmeter), 'rt' (OMDb Tomatometer)
+    or 'tmdb' (fallback). Films are returned highest score first, unscored last.
     """
     cached = _response_cache.get(days)
     if cached and time.monotonic() - cached[0] < RESPONSE_TTL:
@@ -104,6 +106,7 @@ async def new_on_streaming(
          for d in details if d],
     )
     use_rt = rt_enabled()
+    use_audience = mdblist.enabled()
 
     films, provider_counts = [], {}
     for summary, detail in zip(listed, details):
@@ -134,17 +137,20 @@ async def new_on_streaming(
             "providers": providers,
             "popularity": summary.get("popularity") or 0,
             "rt_score": rating.get("rt_score"),
+            "rt_audience_score": rating.get("rt_audience_score"),
             "imdb_rating": rating.get("imdb_rating"),
             "tmdb_score": audience,
-            "score": rating.get("rt_score") if use_rt else audience,
+            "score": (rating.get("rt_audience_score") if use_audience
+                      else rating.get("rt_score") if use_rt else audience),
         })
 
     payload = {
-        "rating_source": "rt" if use_rt else "tmdb",
+        "rating_source": "rt_audience" if use_audience else "rt" if use_rt else "tmdb",
         "days": days,
         "generated_at": datetime.utcnow().isoformat(),
         "providers": [name for name, _ in sorted(provider_counts.items(), key=lambda kv: -kv[1])],
-        "films": films,
+        "films": sorted(films, key=lambda film: (
+            film["score"] if film["score"] is not None else -1, film["popularity"]), reverse=True),
     }
     _response_cache[days] = (time.monotonic(), payload)
     return payload

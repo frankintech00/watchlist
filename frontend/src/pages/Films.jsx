@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { filmsAPI, trackingAPI } from '../api/client'
 import Carousel from '../components/Carousel'
 import PosterCard, { Badge, ScoreBadge } from '../components/PosterCard'
+import FilmScores from '../components/FilmScores'
+import Icon from '../components/Icon'
 import { ErrorMessage, RowSkeleton } from '../components/States'
 import { shortDate, year } from '../lib/format'
 
@@ -33,6 +35,10 @@ export default function Films() {
   const [provider, setProvider] = useState(null)
   const [bands, setBands] = useState(() => new Set(BANDS.filter((b) => b.on).map((b) => b.id)))
   const [attempt, setAttempt] = useState(0)
+  const [ranking, setRanking] = useState('audience')
+  const hasAudience = streaming?.rating_source === 'rt_audience'
+  const usingRT = hasAudience || streaming?.rating_source === 'rt'
+  const audienceRanking = ranking === 'audience' && hasAudience
 
   useEffect(() => {
     document.title = 'Films · Watchlist'
@@ -60,7 +66,7 @@ export default function Films() {
   const { grouped, counts, visibleProviders } = useMemo(() => {
     const films = (streaming?.films || []).filter(
       (f) => !provider || f.providers.some((p) => p.name === provider)
-    )
+    ).map((film) => ({ ...film, score: audienceRanking ? film.rt_audience_score : usingRT ? film.rt_score : film.tmdb_score }))
     const grouped = Object.fromEntries(BANDS.map((b) => [b.id, []]))
     for (const film of films) grouped[bandOf(film)].push(film)
     for (const list of Object.values(grouped)) {
@@ -71,7 +77,7 @@ export default function Films() {
       counts: Object.fromEntries(BANDS.map((b) => [b.id, grouped[b.id].length])),
       visibleProviders: (streaming?.providers || []).slice(0, 9),
     }
-  }, [streaming, provider])
+  }, [streaming, provider, audienceRanking, usingRT])
 
   const toggleBand = (id) =>
     setBands((current) => {
@@ -83,7 +89,6 @@ export default function Films() {
 
   const shownBands = BANDS.filter((b) => bands.has(b.id))
   const nothingShown = streaming && shownBands.every((b) => counts[b.id] === 0)
-  const usingRT = streaming?.rating_source === 'rt'
   const watching = (mine || []).filter((m) => m.status === 'watching')
   const watched = (mine || []).filter((m) => m.status === 'watched')
 
@@ -95,7 +100,7 @@ export default function Films() {
         <h1 className="text-3xl sm:text-4xl font-bold mb-2">New on streaming in the UK</h1>
         <p className="text-sm text-muted max-w-2xl">
           Films that have arrived on UK subscription services, grouped by{' '}
-          {usingRT || !streaming ? 'Rotten Tomatoes score' : 'score'} — best first.
+          {!streaming || audienceRanking ? 'Rotten Tomatoes audience score (Popcornmeter)' : usingRT ? 'Rotten Tomatoes critic score (Tomatometer)' : 'TMDB audience score'} — best first.
         </p>
       </header>
 
@@ -107,6 +112,17 @@ export default function Films() {
             </button>
           ))}
         </FilterRow>
+
+        {hasAudience && (
+          <FilterRow label="Rank by">
+            <button onClick={() => setRanking('audience')} className={`chip ${audienceRanking ? 'chip-on' : ''}`} aria-pressed={audienceRanking}>
+              <Icon name="popcorn" className="w-4 h-4" /> Audience
+            </button>
+            <button onClick={() => setRanking('critics')} className={`chip ${!audienceRanking ? 'chip-on' : ''}`} aria-pressed={!audienceRanking}>
+              <Icon name="tomato" className="w-4 h-4" /> Critics
+            </button>
+          </FilterRow>
+        )}
 
         <FilterRow label="Score">
           {BANDS.map((b) => (
@@ -128,16 +144,6 @@ export default function Films() {
           </FilterRow>
         )}
       </div>
-
-      {streaming && !usingRT && (
-        <div className="gutter mb-8">
-          <div className="card border-accent/40 px-4 py-3 text-sm text-muted max-w-3xl">
-            <span className="font-bold text-accent">Showing TMDB audience scores. </span>
-            Rotten Tomatoes scores need a free OMDb key — add <code className="text-fg">OMDB_API_KEY</code> to
-            the <code className="text-fg">.env</code> file and restart (see the README).
-          </div>
-        </div>
-      )}
 
       {streamingError && (
         <ErrorMessage title="Could not load streaming releases" error={streamingError} onRetry={() => setAttempt((n) => n + 1)} />
@@ -165,7 +171,8 @@ export default function Films() {
               title={film.title}
               poster={film.poster_path}
               subtitle={[film.providers[0]?.name, shortDate(film.streaming_date)].filter(Boolean).join('  ·  ')}
-              badge={<ScoreBadge score={film.score} />}
+              badge={!usingRT && <ScoreBadge score={film.score} />}
+              ratings={usingRT && <FilmScores audience={film.rt_audience_score} critics={film.rt_score} compact />}
               status={statusById[film.id]}
             />
           ))}

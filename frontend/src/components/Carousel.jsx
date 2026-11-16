@@ -78,7 +78,7 @@ export default function Carousel({
         <div
           ref={scroller}
           onScroll={measure}
-          className="gutter flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide snap-x scroll-px-4 sm:scroll-px-6 lg:scroll-px-10 pb-1"
+          className="gutter flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide snap-x scroll-px-4 sm:scroll-px-6 lg:scroll-px-10 py-1 -my-1"
         >
           {items.map((child) => (
             <div key={child.key} className={`flex-none snap-start ${itemClass}`}>

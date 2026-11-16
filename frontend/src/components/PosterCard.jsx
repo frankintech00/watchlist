@@ -9,12 +9,12 @@ import { img, scoreTone } from '../lib/format'
  *   status    'watching' | 'watched' — shows the tracked marker top-right
  *   progress  0-1 — bar along the bottom of the poster
  */
-export default function PosterCard({ to, title, poster, subtitle, badge, status, progress }) {
+export default function PosterCard({ to, title, poster, subtitle, badge, status, progress, ratings }) {
   const src = img(poster, 'w342')
 
   return (
     <Link to={to} className="group block min-w-0" title={title}>
-      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-panel ring-1 ring-white/10 transition duration-200 group-hover:ring-2 group-hover:ring-accent group-hover:-translate-y-1 group-focus-visible:ring-2 group-focus-visible:ring-accent">
+      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-panel ring-1 ring-white/10 transition-shadow duration-200 group-hover:ring-2 group-hover:ring-accent group-focus-visible:ring-2 group-focus-visible:ring-accent">
         {src ? (
           <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
         ) : (
@@ -35,6 +35,7 @@ export default function PosterCard({ to, title, poster, subtitle, badge, status,
 
       <p className="mt-2 text-[13px] sm:text-sm font-bold text-fg truncate">{title}</p>
       {subtitle && <p className="text-xs text-muted truncate">{subtitle}</p>}
+      {ratings}
     </Link>
   )
 }

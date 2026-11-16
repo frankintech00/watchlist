@@ -28,6 +28,8 @@ services:
       - TMDB_API_KEY=${TMDB_API_KEY}
       # Optional: enables Rotten Tomatoes scores (free key from omdbapi.com)
       - OMDB_API_KEY=${OMDB_API_KEY:-}
+      # Optional: Rotten Tomatoes critic and audience scores
+      - MDBLIST_API_KEY=${MDBLIST_API_KEY:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
       interval: 10s

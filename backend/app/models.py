@@ -141,3 +141,15 @@ class FilmRating(Base):
     imdb_rating = Column(Float, nullable=True)      # 0-10
     metascore = Column(Integer, nullable=True)      # 0-100
     fetched_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class FilmMDBRating(Base):
+    """MDBList cache, separate from OMDb so enabling it fetches audience data immediately."""
+    __tablename__ = "film_mdb_ratings"
+
+    tmdb_movie_id = Column(Integer, primary_key=True)
+    rt_score = Column(Integer, nullable=True)
+    rt_audience_score = Column(Integer, nullable=True)
+    imdb_rating = Column(Float, nullable=True)
+    metascore = Column(Integer, nullable=True)
+    fetched_at = Column(DateTime, default=datetime.utcnow, nullable=False)

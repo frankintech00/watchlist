@@ -141,6 +141,7 @@ async def get_movie_detail(movie_id: int, db: Session = Depends(get_db)):
         "imdb_id": imdb_id,
         "tmdb_score": tmdb_score(data),
         "rt_score": rating.get("rt_score"),
+        "rt_audience_score": rating.get("rt_audience_score"),
         "imdb_rating": rating.get("imdb_rating"),
         "rt_enabled": rt_enabled(),
         "providers": uk_providers(data),

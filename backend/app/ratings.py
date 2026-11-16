@@ -2,10 +2,9 @@
 ===================================================================================
 Script: ratings.py
 Purpose:
-    Critic scores for films. Rotten Tomatoes does not offer a public API, so the
-    Tomatometer is read through OMDb (https://www.omdbapi.com — free key, 1,000
-    requests/day) and cached in SQLite. Without an OMDB_API_KEY the app falls back
-    to TMDB's audience score and says so.
+    Film ratings from MDBList (critics and audience), with OMDb filling missing
+    critic, IMDb and Metacritic scores. Provider caches are kept independently.
+    Without either key the app uses a clearly labelled TMDB audience score.
 
 Author: Frank Kelly
 Date: 15-11-2026
@@ -20,6 +19,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.models import FilmRating
+from app import mdblist
 from app.tmdb_client import get_client
 
 
@@ -35,7 +35,7 @@ _semaphore = asyncio.Semaphore(8)
 
 
 def rt_enabled() -> bool:
-    return bool(OMDB_API_KEY)
+    return bool(OMDB_API_KEY) or mdblist.enabled()
 
 
 # === OMDb ===
@@ -88,7 +88,7 @@ async def _fetch_omdb(imdb_id: str) -> Optional[dict]:
 
 # === PUBLIC API ===
 
-async def ratings_for(db: Session, films: list) -> dict:
+async def _omdb_ratings_for(db: Session, films: list) -> dict:
     """
     Critic scores for many films at once.
 
@@ -96,7 +96,7 @@ async def ratings_for(db: Session, films: list) -> dict:
     Returns {tmdb_id: {'rt_score', 'imdb_rating', 'metascore'}} for every film a
     score record exists for. Empty when no OMDb key is configured.
     """
-    if not rt_enabled() or not films:
+    if not OMDB_API_KEY or not films:
         return {}
 
     ids = [tmdb_id for tmdb_id, _ in films]
@@ -135,6 +135,24 @@ async def ratings_for(db: Session, films: list) -> dict:
     return {
         tmdb_id: {"rt_score": r.rt_score, "imdb_rating": r.imdb_rating, "metascore": r.metascore}
         for tmdb_id, r in cached.items()
+    }
+
+
+async def ratings_for(db: Session, films: list) -> dict:
+    """Prefer MDBList; OMDb fills missing critic/IMDb/Metacritic scores only."""
+    primary = await mdblist.ratings_for(db, [movie_id for movie_id, _ in films])
+    missing = [(movie_id, imdb_id) for movie_id, imdb_id in films
+               if any(primary.get(movie_id, {}).get(field) is None
+                      for field in ("rt_score", "imdb_rating", "metascore"))]
+    fallback = await _omdb_ratings_for(db, missing)
+    return {
+        movie_id: {
+            field: primary.get(movie_id, {}).get(field)
+            if primary.get(movie_id, {}).get(field) is not None
+            else fallback.get(movie_id, {}).get(field)
+            for field in mdblist.FIELDS
+        }
+        for movie_id in primary.keys() | fallback.keys()
     }
 
 

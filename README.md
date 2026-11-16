@@ -14,7 +14,8 @@ A self-hosted app for keeping track of what you are **watching** and what you ha
 
 ### Films
 
-- **New on streaming in the UK** — films released digitally in the last 1, 3 or 6 months that are on a UK subscription service right now, **grouped by Rotten Tomatoes score** (90%+, 75–89%, 60–74%, under 60%, no score) and filterable by score band and streaming service.
+- **New on streaming in the UK** — films released digitally in the last 1, 3 or 6 months that are on a UK subscription service right now. With MDBList configured, films rank by **Rotten Tomatoes audience score (Popcornmeter)** by default, highest first, in score bands (90%+, 75–89%, 60–74%, under 60%, no score). Switch to **Critics** to rank by Tomatometer instead, or filter by streaming service.
+- **Both Rotten Tomatoes scores** appear on streaming film cards and detail pages: a popcorn icon for audience scores and a tomato icon for critics. Missing scores appear as a dash; they are never replaced by IMDb or TMDB ratings. Films without the selected score are in **No score**, which can be enabled in the filters.
 - **Coming soon** — UK cinema and digital releases over the next four months, with dates.
 - **Your films** — mark any film as Watching or Watched.
 
@@ -30,31 +31,36 @@ A self-hosted app for keeping track of what you are **watching** and what you ha
 - **Your rating and a private note** on any title.
 - **Installable** as an app on phones (PWA).
 
-## Rotten Tomatoes scores (optional, recommended)
+## Rotten Tomatoes critic and audience scores
 
-Rotten Tomatoes has no public API, so scores are read through [OMDb](https://www.omdbapi.com/apikey.aspx), which offers a free key (1,000 requests a day). Scores are cached in the database, so normal use stays far below that.
+Use [MDBList](https://mdblist.com/signin) for both scores. Sign in, generate a key in [Preferences → API](https://mdblist.com/preferences/#api), and add `MDBLIST_API_KEY` to your local `.env`. The [free API tier](https://docs.mdblist.com/docs/api) allows 1,000 requests per day, shared with any other apps using that account.
 
-Without a key the Films page still works, but groups films by **TMDB audience score** instead and says so on the page.
+[OMDb](https://www.omdbapi.com/apikey.aspx) is optional: it fills missing critic, IMDb and Metacritic scores. It does not supply the audience score used here. MDBList's `tomatoes` value supplies critics; `popcorn` (or legacy `tomatoesaudience`) supplies audience scores. IMDb remains a separate rating out of 10.
 
-To turn Rotten Tomatoes on, add the key to `.env` and recreate the backend:
+With MDBList configured, the default ranking uses Popcornmeter. With only OMDb, it uses Tomatometer. With neither, it uses the clearly labelled TMDB audience score. Some titles have no scores even when the API connection works.
 
-```
-OMDB_API_KEY=your_omdb_key
-```
+Both providers have separate SQLite caches. MDBList results with both RT scores refresh after seven days; incomplete results refresh after one day. OMDb results refresh after seven days with a critic score, or one day without one. Enabling MDBList fills its new cache immediately without deleting existing ratings. Provider failures retain cached scores; MDBList rate-limit responses pause further lookups until the retry time. The streaming response is also cached for three hours.
+
+After editing keys, recreate the backend (a plain restart does not reload `.env`):
 
 ```bash
-docker compose up -d backend
+docker compose up -d --force-recreate --wait backend
 ```
+
+Keep `.env` local: Git ignores it. `.env.example` contains placeholders only. Keys stay in the backend, never in the browser bundle.
+
+MDBList lookups use batches of up to 200 films, matched by TMDB ID, to avoid a separate network round trip for every poster. Missing batch entries and failed requests do not overwrite cached scores.
 
 ## Getting started
 
 You need Docker with Docker Compose, and a free TMDB API key from [themoviedb.org](https://www.themoviedb.org/settings/api).
 
 1. Clone the repository.
-2. Create a `.env` file in the project root:
+2. Copy `.env.example` to `.env` in the project root and set your keys:
    ```
    TMDB_API_KEY=your_tmdb_key
-   OMDB_API_KEY=your_omdb_key   # optional — Rotten Tomatoes scores
+   MDBLIST_API_KEY=your_mdblist_key  # optional — critics and audience
+   OMDB_API_KEY=your_omdb_key        # optional — fallback critic and IMDb scores
    ```
 3. Build and start:
    ```bash
@@ -71,6 +77,7 @@ You need Docker with Docker Compose, and a free TMDB API key from [themoviedb.or
 |---|---|---|
 | `TMDB_API_KEY` | Yes | Titles, artwork, cast, UK streaming availability |
 | `OMDB_API_KEY` | No | Rotten Tomatoes and IMDb scores for films |
+| `MDBLIST_API_KEY` | No | Rotten Tomatoes critics and audience; enables default Popcornmeter ranking |
 | `DATABASE_PATH` | No | SQLite path (default `/app/data/watchlist.db`) |
 
 ## Applying changes
@@ -122,7 +129,8 @@ watchlist/
 │   ├── models.py              # users, tracked shows / films / episodes, score cache
 │   ├── migrations.py          # idempotent schema migrations, run on every boot
 │   ├── tmdb_client.py         # shared TMDB client, cache, episode-progress helpers
-│   ├── ratings.py             # Rotten Tomatoes scores via OMDb, cached
+│   ├── ratings.py             # combines MDBList with cached OMDb fallback
+│   ├── mdblist.py             # cached RT critic and audience scores, retry cooldown
 │   └── routers/
 │       ├── tv_tracking.py     # /api/tracking/shows…   shows and episodes
 │       ├── tracking.py        # /api/tracking/movies…  films; /api/tracking/ids
@@ -141,6 +149,7 @@ watchlist/
 - **Progress counts aired episodes only**, excluding specials, so a show can be completed while a future season is merely announced.
 - **The API keys stay on the server** — the browser only ever talks to `/api`.
 - **Look and feel** is defined in two places: the palette (every colour is a shade of the primary, `#A1B5D8`) and font (Arial) in `frontend/tailwind.config.js`, and shared classes (`.btn-primary`, `.chip`, `.card`…) in `frontend/src/index.css`.
+- **Poster cards stay in place on hover.** Carousels leave vertical space for hover and keyboard-focus borders so the top edge is not clipped.
 
 ## Profiles
 
@@ -164,6 +173,9 @@ Version 3 replaced *watched / to watch / favourites* with the single watching-or
 Episode ticks, ratings and notes are kept. The favourite and watchlist columns are dropped. **Back up `data/watchlist.db` before upgrading** if you may want to roll back.
 
 ## Notes
+
+- Backend ratings regression tests (no external requests): `docker compose run --rm --no-deps -v ./backend/tests:/app/tests backend python -m unittest discover -s tests -v`.
+- The additional `film_mdb_ratings` cache table is created automatically at startup; existing tracking data and OMDb cache entries are preserved.
 
 - `data/` is bind-mounted into the backend container and holds the database and avatar images. Back it up to back up everything.
 - Images are served directly from `image.tmdb.org`.

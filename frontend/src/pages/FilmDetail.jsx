@@ -5,6 +5,7 @@ import { CastRow, Providers, Reviews, Score, TrailerButton } from '../components
 import { MyTake, StatusControl } from '../components/TrackingControls'
 import { Backdrop, ErrorMessage, PageLoading } from '../components/States'
 import { img, longDate, runtime, year } from '../lib/format'
+import FilmScores from '../components/FilmScores'
 
 export default function FilmDetail() {
   const { id } = useParams()
@@ -113,11 +114,11 @@ export default function FilmDetail() {
             {actionError && <p className="text-sm text-rotten" role="alert">Could not save: {actionError}</p>}
 
             {/* Scores */}
-            {(film.rt_score != null || film.imdb_rating != null || film.tmdb_score != null) && (
+            {(film.rt_enabled || film.imdb_rating != null || film.tmdb_score != null) && (
               <div className="flex flex-wrap items-baseline gap-x-7 gap-y-2">
-                <Score value={film.rt_score} label="Rotten Tomatoes" />
-                <Score value={film.imdb_rating} label="IMDb" suffix="" tone="text-fg" />
-                <Score value={film.tmdb_score} label="TMDB" />
+                {film.rt_enabled && <FilmScores audience={film.rt_audience_score} critics={film.rt_score} />}
+                <Score value={film.imdb_rating} label="IMDb" suffix="/10" tone="text-fg" />
+                <Score value={film.tmdb_score} label="TMDB audience" />
               </div>
             )}
 
